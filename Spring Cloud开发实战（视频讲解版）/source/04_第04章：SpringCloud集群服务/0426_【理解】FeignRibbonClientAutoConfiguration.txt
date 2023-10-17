@@ -1,0 +1,74 @@
+1、
+package muyan.yootk.config.ribbon; // 该包不在应用程序启动类的扫描包路径下
+
+import com.netflix.loadbalancer.IRule;
+import com.netflix.loadbalancer.RandomRule;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration // 这个类必须使用该注解定义
+public class DeptProviderRibbonConfig {
+    @Bean // Bean注册
+    public IRule ribbonRule() { // 自定义负载均衡规则
+        return new RandomRule(); // 随机读取
+    }
+}
+
+
+2、
+package org.springframework.cloud.openfeign.ribbon;
+// Ribbon组件里面所提供的ILoaderBalancer就描述了负载均衡的公共标准
+@ConditionalOnClass({ ILoadBalancer.class, Feign.class }) // 必须有指定的类存在才可以配置
+@ConditionalOnProperty(value = "spring.cloud.loadbalancer.ribbon.enabled",
+      matchIfMissing = true) // 需要有一个配置项存在，不存在就表示默认启用
+@Configuration(proxyBeanMethods = false)
+@AutoConfigureBefore(FeignAutoConfiguration.class) // 应该有一个配置类在之前完成
+@EnableConfigurationProperties({ FeignHttpClientProperties.class }) // 接收配置属性
+@Import({ HttpClientFeignLoadBalancedConfiguration.class, // 使用HttpClient实现访问
+      OkHttpFeignLoadBalancedConfiguration.class,
+      DefaultFeignLoadBalancedConfiguration.class })
+public class FeignRibbonClientAutoConfiguration {
+   @Bean
+   @Primary // 首要配置
+   @ConditionalOnMissingBean
+   @ConditionalOnMissingClass("org.springframework.retry.support.RetryTemplate")
+   public CachingSpringLoadBalancerFactory cachingLBClientFactory(
+         SpringClientFactory factory) { // 所有的节点应该在本地做缓存
+      return new CachingSpringLoadBalancerFactory(factory); // 缓冲Spring负载均衡加载工厂
+   }
+   @Bean
+   @Primary
+   @ConditionalOnMissingBean
+   @ConditionalOnClass(name = "org.springframework.retry.support.RetryTemplate")
+   public CachingSpringLoadBalancerFactory retryabeCachingLBClientFactory(
+         SpringClientFactory factory, LoadBalancedRetryFactory retryFactory) {
+      return new CachingSpringLoadBalancerFactory(factory, retryFactory);
+   }
+   @Bean
+   @ConditionalOnMissingBean
+   public Request.Options feignRequestOptions() { // 请求的处理参数
+      return LoadBalancerFeignClient.DEFAULT_OPTIONS;
+   }
+}
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

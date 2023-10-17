@@ -1,0 +1,145 @@
+1、
+package com.yootk.service;
+
+import com.yootk.common.dto.MemberDTO;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@FeignClient("microcloud.gateway")
+public interface IMemberTokenService {
+    @GetMapping("/token/create")
+    public String login(MemberDTO memberDTO);
+}
+
+
+2、
+package com.yootk.service.load;
+
+import com.yootk.common.dto.MemberDTO;
+import com.yootk.service.IMemberTokenService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+public class FeignTokenLoaderRunner implements CommandLineRunner {
+    @Autowired
+    private IMemberTokenService memberTokenService; // 远程接口映射
+    @Override
+    public void run(String... args) throws Exception {
+        MemberDTO dto = new MemberDTO();
+        dto.setMid("admin");
+        dto.setPassword("hello");
+        String token = this.memberTokenService.login(dto); // 获取Token
+        if (token != null) {    // 已经获取到了Token数据
+            log.info("获取Token数据成功：{}", token);
+            System.setProperty("yootk.token", token); // 属性不允许为null
+        }
+    }
+}
+
+
+3、
+package com.yootk.service.config;
+
+import feign.Logger;
+import feign.RequestInterceptor;
+import org.springframework.context.annotation.Bean;
+
+public class FeignConfig { // 定义Feign配置类
+    @Bean
+    public Logger.Level level() {
+        return Logger.Level.FULL; // 输出完全的日志信息
+    }
+    @Bean
+    public RequestInterceptor getFeignRequestInterceptor() {    // 请求拦截器
+        return (template -> {
+            template.header("serviceName", "pc");
+            // 将系统JVM进程保存的Token数据发送到目标请求端
+            template.header("yootk-token", System.getProperty("yootk.token"));
+        });
+    }
+}
+
+
+4、
+package com.yootk.consumer;
+
+import com.yootk.service.config.FeignConfig;
+import muyan.yootk.config.ribbon.DeptProviderRibbonConfig;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.ribbon.RibbonClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+// 如果此时要有多个配置项，可以使用@RibbonClients注解，该注解可以配置多个@RibbonClient
+@RibbonClient(name = "dept.provider", configuration = DeptProviderRibbonConfig.class) // 自定义Ribbon配置
+@ComponentScan({"com.yootk.service", "com.yootk.consumer"})
+@EnableFeignClients(basePackages = {"com.yootk.service"}, defaultConfiguration = FeignConfig.class) // Feign扫描包
+public class StartConsumerApplication { // 沐言科技：www.yootk.com
+    public static void main(String[] args) {
+        SpringApplication.run(StartConsumerApplication.class, args);
+
+    }
+}
+
+
+5、
+spring:
+  main:
+    allow-bean-definition-overriding: true
+
+6、
+package com.yootk.provider.action;
+
+import com.yootk.common.dto.MemberDTO;
+import com.yootk.jwt.service.IEncryptService;
+import com.yootk.jwt.service.ITokenService;
+import com.yootk.service.IMemberService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/token/*")
+public class TokenAction {
+    @Autowired
+    private IMemberService memberService; // 本模块提供的
+    @Autowired
+    private IEncryptService encryptService; // yootk-starter-jwt模块提供的
+    @Autowired
+    private ITokenService tokenService; // yootk-starter-jwt模块提供的
+    @RequestMapping("create")
+    public Object login(@RequestBody MemberDTO memberDTO) {
+        // 对用户传入的密码信息进行加密处理
+        memberDTO.setPassword(this.encryptService.getEncryptPassword(memberDTO.getPassword()));
+        Map<String, Object> result = this.memberService.login(memberDTO); // 登录业务处理
+        if (((Boolean)result.get("status"))) {  // 登录状态
+            return this.tokenService.createToken(result.get("mid").toString(), (Map<String, Object>) result.get("resource"));
+        }
+        return null;
+    }
+    @RequestMapping("parse")
+    public Object parseToken(String token) {
+        return this.tokenService.parseToken(token); // Token解析处理
+    }
+}
+
+
+7、
+
+
+8、
+
+
+9、
+

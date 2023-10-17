@@ -1,0 +1,147 @@
+1、
+project(":consumer-springboot-80") { // 消费端模块
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+2、
+server: # 服务端配置
+  port: 80 # 这个接口可以随意，反正最终都是由前端提供服务
+spring:
+  application: # 配置应用信息
+    name: consumer # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-cluster-a:8848,nacos-cluster-b:8848,nacos-cluster-c:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        register-enabled: false # 消费端不注册
+
+3、
+package com.yootk.consumer.util;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+
+@Component // Bean注册
+@Slf4j // Lombok日志
+public class RandomAccessUtil { // 自定义的随机访问算法
+    @Autowired // 注入Nacos中的发现服务客户端
+    private DiscoveryClient discoveryClient; // 发现服务
+    /**
+     * 根据指定的微服务名称来获取完整的处理路径
+     * @param serviceName Nacos之中注册的微服务的实例名称
+     * @param uri 相对的访问路径
+     * @return 是一个完整的拼凑路径
+     */
+    public String getTargetUrl(String serviceName, String uri) {
+        // 根据指定的服务名称获取全部的服务实例
+        List<ServiceInstance> instances = this.discoveryClient.getInstances(serviceName);
+        // 现在是根据名称来获取所有的实例信息，所以如果名称不存在，一定获取不到
+        if (instances.size() == 0) {    // 没有该服务名称实例
+            throw new RuntimeException("Nacos服务名称ID无法获取，拜拜喽~");
+        }
+        List<String> collect = instances.stream().map(instance -> instance.getUri().toString() + uri)
+                .collect(Collectors.toList());
+        int num = ThreadLocalRandom.current().nextInt(collect.size()); // 随机算法
+        String targetURL = collect.get(num); // 随机抽取一个完整的路径
+        log.info("获取Nacos服务注册地址：{}", targetURL);
+        return targetURL;
+    }
+}
+
+
+4、
+package com.yootk.consumer.action;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.consumer.util.RandomAccessUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/consumer/dept/*") // 两个不同的服务路径
+public class DeptConsumerAction { // 消费端Action
+    // 定义出要访问的部门微服务所需要的核心路径前缀，随后在具体请求的时候添加传递的参数
+    public static final String DEPT_ADD_URL = "/provider/dept/add";
+    public static final String DEPT_GET_URL = "/provider/dept/get/"; // id是自己变更的
+    public static final String DEPT_LIST_URL = "/provider/dept/list";
+    public static final String DEPT_SPLIT_URL = "/provider/dept/split";
+    public static final String SERVICE_ID = "dept.provider"; // Nacos中注册的服务名称
+    @Autowired
+    private RestTemplate restTemplate; // 再见最后一面
+    @Autowired
+    private RandomAccessUtil randomAccessUtil; // 根据服务名称拼凑路径
+    @GetMapping("add") // 消费端接口名称
+    public Object addDept(DeptDTO dto) {
+        // 需要将当前的DTO对象传递到部门微服务之中，所以此时就要通过RestTemplate对象处理
+        String deptAddUrl = this.randomAccessUtil.getTargetUrl(SERVICE_ID, DEPT_ADD_URL); // 路径的拼凑
+        return this.restTemplate.postForObject(deptAddUrl, dto, Boolean.class);
+    }
+    @GetMapping("get")
+    public Object get(Long deptno) {
+        String deptGetUrl = this.randomAccessUtil.getTargetUrl(SERVICE_ID, DEPT_GET_URL); // 路径的拼凑
+        return this.restTemplate.getForObject(deptGetUrl + deptno, DeptDTO.class);
+    }
+    @GetMapping("list")
+    public Object list() {
+        String deptListUrl = this.randomAccessUtil.getTargetUrl(SERVICE_ID, DEPT_LIST_URL); // 路径的拼凑
+        return this.restTemplate.getForObject(deptListUrl, List.class);
+    }
+    @GetMapping("split")
+    public Object split(int cp, int ls, String col, String kw) {
+        String deptSplitUrl = this.randomAccessUtil.getTargetUrl(SERVICE_ID, DEPT_SPLIT_URL); // 路径的拼凑
+        return this.restTemplate.getForObject(deptSplitUrl + "?cp=" + cp + "&ls=" + ls + "&col=" + col + "&kw=" + kw, Map.class);
+    }
+}
+
+
+5、
+
+package com.yootk.consumer;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class StartConsumerApplication { // 沐言科技：www.yootk.com
+    public static void main(String[] args) {
+        SpringApplication.run(StartConsumerApplication.class, args);
+    }
+}
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

@@ -1,0 +1,32 @@
+2021-07-18 14:59:05.934  INFO [] 11316 --- [main] com.yootk.test.TestDeptService           : Starting TestDeptService on DESKTOP-O838165 with PID 11316 (started by yootk in H:\workspace\idea\microcloud\provider-dept-8001)
+2021-07-18 14:59:05.935  INFO [] 11316 --- [main] com.yootk.test.TestDeptService           : No active profile set, falling back to default profiles: default
+2021-07-18 14:59:08.425  INFO [] 11316 --- [main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+2021-07-18 14:59:08.770  INFO [] 11316 --- [main] com.yootk.test.TestDeptService           : Started TestDeptService in 3.505 seconds (JVM running for 5.688)
+2021-07-18 14:59:09.635  INFO [] 11316 --- [main] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} inited
+2021-07-18 14:59:10.317  INFO [] 11316 --- [SpringContextShutdownHook] o.s.s.concurrent.ThreadPoolTaskExecutor  : Shutting down ExecutorService 'applicationTaskExecutor'
+2021-07-18 14:59:10.319  INFO [] 11316 --- [SpringContextShutdownHook] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} closing ...
+2021-07-18 14:59:10.325  INFO [] 11316 --- [SpringContextShutdownHook] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} closed
+2021-07-18 14:59:42.182  INFO [] 676 --- [main] com.yootk.test.TestDeptService           : Starting TestDeptService on DESKTOP-O838165 with PID 676 (started by yootk in H:\workspace\idea\microcloud\provider-dept-8001)
+2021-07-18 14:59:42.183  INFO [] 676 --- [main] com.yootk.test.TestDeptService           : No active profile set, falling back to default profiles: default
+2021-07-18 14:59:44.101  INFO [] 676 --- [main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+2021-07-18 14:59:44.440  INFO [] 676 --- [main] com.yootk.test.TestDeptService           : Started TestDeptService in 2.896 seconds (JVM running for 4.044)
+2021-07-18 14:59:44.936  INFO [] 676 --- [main] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} inited
+2021-07-18 14:59:45.437  INFO [] 676 --- [SpringContextShutdownHook] o.s.s.concurrent.ThreadPoolTaskExecutor  : Shutting down ExecutorService 'applicationTaskExecutor'
+2021-07-18 14:59:45.438  INFO [] 676 --- [SpringContextShutdownHook] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} closing ...
+2021-07-18 14:59:45.441  INFO [] 676 --- [SpringContextShutdownHook] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} closed
+2021-07-18 15:00:37.052  INFO [] 14276 --- [main] com.yootk.test.TestDeptService           : Starting TestDeptService on DESKTOP-O838165 with PID 14276 (started by yootk in H:\workspace\idea\microcloud\provider-dept-8001)
+2021-07-18 15:00:37.053  INFO [] 14276 --- [main] com.yootk.test.TestDeptService           : No active profile set, falling back to default profiles: default
+2021-07-18 15:00:39.352  INFO [] 14276 --- [main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+2021-07-18 15:00:39.679  INFO [] 14276 --- [main] com.yootk.test.TestDeptService           : Started TestDeptService in 3.201 seconds (JVM running for 4.504)
+2021-07-18 15:00:40.143  INFO [] 14276 --- [main] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} inited
+2021-07-18 15:00:40.863  INFO [] 14276 --- [SpringContextShutdownHook] o.s.s.concurrent.ThreadPoolTaskExecutor  : Shutting down ExecutorService 'applicationTaskExecutor'
+2021-07-18 15:00:40.864  INFO [] 14276 --- [SpringContextShutdownHook] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} closing ...
+2021-07-18 15:00:40.868  INFO [] 14276 --- [SpringContextShutdownHook] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} closed
+2021-07-18 15:01:29.958  INFO [] 14096 --- [main] com.yootk.test.TestDeptService           : Starting TestDeptService on DESKTOP-O838165 with PID 14096 (started by yootk in H:\workspace\idea\microcloud\provider-dept-8001)
+2021-07-18 15:01:29.959  INFO [] 14096 --- [main] com.yootk.test.TestDeptService           : No active profile set, falling back to default profiles: default
+2021-07-18 15:01:31.950  INFO [] 14096 --- [main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+2021-07-18 15:01:32.240  INFO [] 14096 --- [main] com.yootk.test.TestDeptService           : Started TestDeptService in 2.912 seconds (JVM running for 4.036)
+2021-07-18 15:01:32.721  INFO [] 14096 --- [main] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} inited
+2021-07-18 15:01:33.346  INFO [] 14096 --- [SpringContextShutdownHook] o.s.s.concurrent.ThreadPoolTaskExecutor  : Shutting down ExecutorService 'applicationTaskExecutor'
+2021-07-18 15:01:33.350  INFO [] 14096 --- [SpringContextShutdownHook] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} closing ...
+2021-07-18 15:01:33.355  INFO [] 14096 --- [SpringContextShutdownHook] com.alibaba.druid.pool.DruidDataSource   : {dataSource-1} closed

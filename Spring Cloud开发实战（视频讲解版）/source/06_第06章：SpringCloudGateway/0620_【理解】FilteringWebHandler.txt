@@ -1,0 +1,108 @@
+1、
+@Bean
+public FilteringWebHandler filteringWebHandler(List<GlobalFilter> globalFilters) {
+   return new FilteringWebHandler(globalFilters); // 需要保存全部的全局过滤器
+}
+
+
+2、
+package org.springframework.cloud.gateway.handler;
+public class FilteringWebHandler implements WebHandler {
+   protected static final Log logger = LogFactory.getLog(FilteringWebHandler.class);
+   private final List<GatewayFilter> globalFilters; // 网关过滤器
+   public FilteringWebHandler(List<GlobalFilter> globalFilters) { // 全局过滤器
+      this.globalFilters = loadFilters(globalFilters); // 加载全局过滤器
+   }
+   private static List<GatewayFilter> loadFilters(List<GlobalFilter> filters) {
+// 将GlobalFilter接口的全部子类实例，转为了GatewayFilter实例
+      return filters.stream().map(filter -> { // Stream处理，此时的filter为GlobalFilter实例
+// 创建GatewayFilter的实现子类对象实例（适配器的处理类）
+         GatewayFilterAdapter gatewayFilter = new GatewayFilterAdapter(filter);
+         if (filter instanceof Ordered) { // 是否是Ordered接口子类
+            int order = ((Ordered) filter).getOrder();// 获取执行顺序，数字越小越先执行
+            return new OrderedGatewayFilter(gatewayFilter, order); // GatewayFilter子类
+         }
+         return gatewayFilter; 
+      }).collect(Collectors.toList());// 将最终的处理结果转为List集合返回
+   }
+   @Override // ServerWebExchange可以获取到Request/Response对象实例
+   public Mono<Void> handle(ServerWebExchange exchange) { // WebHandler接口的方法
+      Route route = exchange.getRequiredAttribute(GATEWAY_ROUTE_ATTR); // 获取路由
+      List<GatewayFilter> gatewayFilters = route.getFilters();// 获取网关过滤
+      List<GatewayFilter> combined = new ArrayList<>(this.globalFilters); // 组合过滤器
+      combined.addAll(gatewayFilters); // 添加网关过滤
+      AnnotationAwareOrderComparator.sort(combined); // 进行过滤排序
+      if (logger.isDebugEnabled()) {
+         logger.debug("Sorted gatewayFilterFactories: " + combined);
+      }
+      return new DefaultGatewayFilterChain(combined).filter(exchange); // 过滤链
+   }
+   private static class DefaultGatewayFilterChain implements GatewayFilterChain {
+      private final int index;
+      private final List<GatewayFilter> filters;
+      DefaultGatewayFilterChain(List<GatewayFilter> filters) {
+         this.filters = filters;
+         this.index = 0;
+      }
+      private DefaultGatewayFilterChain(DefaultGatewayFilterChain parent, int index) {
+         this.filters = parent.getFilters();
+         this.index = index;
+      }
+      public List<GatewayFilter> getFilters() {
+         return filters;
+      }
+      @Override
+      public Mono<Void> filter(ServerWebExchange exchange) {
+         return Mono.defer(() -> {
+            if (this.index < filters.size()) {
+               GatewayFilter filter = filters.get(this.index);
+               DefaultGatewayFilterChain chain = new DefaultGatewayFilterChain(this,
+                     this.index + 1);
+               return filter.filter(exchange, chain);
+            }
+            else {
+               return Mono.empty(); // complete
+            }
+         });
+      }
+   }
+   private static class GatewayFilterAdapter implements GatewayFilter {
+      private final GlobalFilter delegate;
+      GatewayFilterAdapter(GlobalFilter delegate) {
+         this.delegate = delegate;
+      }
+      @Override
+      public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+         return this.delegate.filter(exchange, chain);
+      }
+      @Override
+      public String toString() {
+         final StringBuilder sb = new StringBuilder("GatewayFilterAdapter{");
+         sb.append("delegate=").append(delegate);
+         sb.append('}');
+         return sb.toString();
+      }
+   }
+}
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

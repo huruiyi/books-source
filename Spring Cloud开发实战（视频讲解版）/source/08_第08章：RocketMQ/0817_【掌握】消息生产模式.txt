@@ -1,0 +1,113 @@
+1、
+package com.yootk.rockemq;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
+import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
+import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
+import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
+import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.SendCallback;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.remoting.RPCHook;
+import org.apache.rocketmq.remoting.common.RemotingHelper;
+
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
+public class MessageProducer { // 消息生产者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String PRODUCER_GROUP = "muyan-group"; // 定义消费组
+    public static final String TOPIC = "TopicYootk"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、创建一个消息的生产者
+        DefaultMQProducer producer = new DefaultMQProducer(PRODUCER_GROUP, clientHook);
+        producer.setNamesrvAddr(NAME_SERVER_LIST); // NameServer地址
+        producer.start(); // 启动生产者
+        final CountDownLatch countDownLatch = new CountDownLatch(3); // 发送等待
+        for (int x = 0; x < 3; x++) {// 3、采用循环的方式进行消息的生产
+            Message msg = new Message(TOPIC, "沐言科技：www.yootk.com"
+                    .getBytes(RemotingHelper.DEFAULT_CHARSET)); // 消息需要二进制
+            producer.send(msg, new SendCallback() { // 异步处理
+                @Override
+                public void onSuccess(SendResult result) {
+                    System.out.printf("【消息发送】%s %n", result);
+                    countDownLatch.countDown(); // 计数减少
+                }
+                @Override
+                public void onException(Throwable e) {
+                    System.err.printf("【发送失败】%s %n", e.getMessage());
+                }
+            });
+        }
+        countDownLatch.await(); // 等待全部接收完成
+        producer.shutdown(); // 关闭生产者
+    }
+}
+
+
+2、
+package com.yootk.rockemq;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.remoting.RPCHook;
+import org.apache.rocketmq.remoting.common.RemotingHelper;
+
+public class MessageOneWayProducer { // 消息生产者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String PRODUCER_GROUP = "muyan-group"; // 定义消费组
+    public static final String TOPIC = "TopicYootk"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、创建一个消息的生产者
+        DefaultMQProducer producer = new DefaultMQProducer(PRODUCER_GROUP, clientHook);
+        producer.setNamesrvAddr(NAME_SERVER_LIST); // NameServer地址
+        producer.start(); // 启动生产者
+        for (int x = 0; x < 100; x++) {// 3、采用循环的方式进行消息的生产
+            Message msg = new Message(TOPIC, "沐言科技：www.yootk.com"
+                    .getBytes(RemotingHelper.DEFAULT_CHARSET)); // 消息需要二进制
+            producer.sendOneway(msg); // 单向消息
+        }
+        producer.shutdown(); // 关闭生产者
+    }
+}
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

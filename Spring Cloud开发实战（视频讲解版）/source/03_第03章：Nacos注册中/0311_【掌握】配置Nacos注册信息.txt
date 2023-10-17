@@ -1,0 +1,48 @@
+1、
+96c23d77-8d08-4648-b750-1217845607ee
+
+2、
+spring: # Spring配置项
+  cloud: # SpringCloud配置项
+    nacos: # Nacos注册中心的配置
+      config: # gRPC通讯配置
+        server-addr: nacos-server:8848 # Nacos地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: YootkCluster # 配置集群名称
+
+3、
+spring:
+  application: # 配置应用信息
+    name: dept.provider # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: YootkCluster # 配置集群名称
+        metadata:  # 根据自身的需要配置元数据
+          version: 1.0 # 自定义元数据项
+          company: 沐言科技 # 自定义元数据项
+          url: www.yootk.com # 自定义元数据项
+          author: 李兴华（爆可爱的小李老师） # 自定义元数据项
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

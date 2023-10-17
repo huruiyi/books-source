@@ -1,0 +1,143 @@
+1、
+package com.yootk.rockemq;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.remoting.RPCHook;
+import org.apache.rocketmq.remoting.common.RemotingHelper;
+
+public class MessageKeysProducer { // 消息生产者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String PRODUCER_GROUP = "muyan-group"; // 定义消费组
+    public static final String TOPIC = "TopicYootk"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、创建一个消息的生产者
+        DefaultMQProducer producer = new DefaultMQProducer(PRODUCER_GROUP, clientHook);
+        producer.setNamesrvAddr(NAME_SERVER_LIST); // NameServer地址
+        producer.start(); // 启动生产者
+        for (int x = 0; x < 100; x++) {// 3、采用循环的方式进行消息的生产
+            Message msg = null; // 定义消息对象
+            if (x % 2 == 0) {   // 判断消息标签的配置
+                String keys = "yootk-dept-keys-" + Math.random(); // 消息KEY
+                msg = new Message(TOPIC, "dept", keys, ("【部门消息 - " + x + "】沐言科技：www.yootk.com")
+                        .getBytes(RemotingHelper.DEFAULT_CHARSET)); // 消息需要二进制
+            } else {
+                String keys = "yootk-emp-keys-" + Math.random(); // 消息KEY
+                msg = new Message(TOPIC, "emp", keys,("【雇员消息 - " + x + "】沐言科技：www.yootk.com")
+                        .getBytes(RemotingHelper.DEFAULT_CHARSET)); // 消息需要二进制
+            }
+            SendResult result = producer.send(msg); // 发送并接收发送的结果
+            System.out.printf("【消息发送】%s %n", result);
+        }
+        producer.shutdown(); // 关闭生产者
+    }
+}
+
+2、
+package com.yootk.rockemq;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.consumer.DefaultLitePullConsumer;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.remoting.RPCHook;
+
+import java.util.List;
+
+public class MessagePullDeptConsumer { // 消息消费者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String CONSUMER_GROUP = "muyan-group-dept"; // 定义消费组
+    public static final String TOPIC = "TopicYootk"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、要在项目之中启动一个消费者的处理程序类，但是这个消费者分为两种形式
+        DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(CONSUMER_GROUP, clientHook); // 使用PULL模式
+        consumer.setNamesrvAddr(NAME_SERVER_LIST); // 通过NameServer获取相应的Broker数据
+        consumer.subscribe(TOPIC, "dept"); // 匹配指定主题的所有消息
+        consumer.start(); // 启动消息的消费者
+        boolean running = true; // 接收的状态
+        while (running) {   // 处理了一个死循环的概念
+            List<MessageExt> messages = consumer.poll(); // 手工的进行消息的拉取
+            if (messages != null) { // 因为可能拉取到消息，也可能没有拉取到
+                for (Message msg : messages) {
+                    System.out.printf("【%s】keys = %s、body = %s %n", msg.getTags(), msg.getKeys(), new String(msg.getBody()));
+                }
+            }
+        }
+        consumer.shutdown();
+    }
+}
+
+
+3、
+package com.yootk.rockemq;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.consumer.DefaultLitePullConsumer;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.remoting.RPCHook;
+
+import java.util.List;
+
+public class MessagePullEmpConsumer { // 消息消费者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String CONSUMER_GROUP = "muyan-group-emp"; // 定义消费组
+    public static final String TOPIC = "TopicYootk"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、要在项目之中启动一个消费者的处理程序类，但是这个消费者分为两种形式
+        DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(CONSUMER_GROUP, clientHook); // 使用PULL模式
+        consumer.setNamesrvAddr(NAME_SERVER_LIST); // 通过NameServer获取相应的Broker数据
+        consumer.subscribe(TOPIC, "emp"); // 匹配指定主题的所有消息
+        consumer.start(); // 启动消息的消费者
+        boolean running = true; // 接收的状态
+        while (running) {   // 处理了一个死循环的概念
+            List<MessageExt> messages = consumer.poll(); // 手工的进行消息的拉取
+            if (messages != null) { // 因为可能拉取到消息，也可能没有拉取到
+                for (Message msg : messages) {
+                    System.out.printf("【%s】keys = %s、body = %s %n", msg.getTags(), msg.getKeys(), new String(msg.getBody()));
+                }
+            }
+        }
+        consumer.shutdown();
+    }
+}
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

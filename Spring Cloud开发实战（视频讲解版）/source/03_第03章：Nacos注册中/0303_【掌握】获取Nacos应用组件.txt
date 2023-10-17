@@ -1,0 +1,26 @@
+1、
+https://github.com/alibaba/nacos/releases
+
+2、
+常规命令：git clone https://github.com/alibaba/nacos.git
+
+3、
+常规命令：git clone -b 2.0.0 https://github.com/alibaba/nacos.git
+
+4、
+mvn -Prelease-nacos -Dmaven.test.skip=true clean install -U
+
+5、
+localhost:8848/nacos
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

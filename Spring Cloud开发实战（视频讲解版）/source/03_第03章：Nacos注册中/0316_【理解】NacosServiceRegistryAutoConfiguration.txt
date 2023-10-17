@@ -1,0 +1,169 @@
+1、
+package com.alibaba.cloud.nacos.registry;
+import com.alibaba.cloud.nacos.ConditionalOnNacosDiscoveryEnabled;
+import com.alibaba.cloud.nacos.NacosDiscoveryProperties;
+import com.alibaba.cloud.nacos.discovery.NacosDiscoveryAutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.client.serviceregistry
+		.AutoServiceRegistrationAutoConfiguration;
+import org.springframework.cloud.client.serviceregistry.AutoServiceRegistrationConfiguration;
+import org.springframework.cloud.client.serviceregistry.AutoServiceRegistrationProperties;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+@Configuration(proxyBeanMethods = false)
+@EnableConfigurationProperties
+@ConditionalOnNacosDiscoveryEnabled
+// application.yml中定义的属性环境，如果没有配置此属性的内容则默认为true
+@ConditionalOnProperty(value = "spring.cloud.service-registry.auto-registration.enabled",
+      matchIfMissing = true)
+@AutoConfigureAfter({ 
+      AutoServiceRegistrationConfiguration.class, // 服务自动注册
+      AutoServiceRegistrationAutoConfiguration.class, // 自动服务注册
+      NacosDiscoveryAutoConfiguration.class }) // Nacos自动配置
+public class NacosServiceRegistryAutoConfiguration {
+   @Bean
+   public NacosServiceRegistry nacosServiceRegistry( // 获取了Nacos注册对象实例
+         NacosDiscoveryProperties nacosDiscoveryProperties) { // Nacos配置属性
+      return new NacosServiceRegistry(nacosDiscoveryProperties);
+   }
+   @Bean
+   @ConditionalOnBean(AutoServiceRegistrationProperties.class) // 自动服务注册属性
+   public NacosRegistration nacosRegistration(
+         NacosDiscoveryProperties nacosDiscoveryProperties,
+         ApplicationContext context) {
+      return new NacosRegistration(nacosDiscoveryProperties, context); // Nacos注册实例
+   }
+   @Bean
+   @ConditionalOnBean(AutoServiceRegistrationProperties.class)
+   public NacosAutoServiceRegistration nacosAutoServiceRegistration(
+         NacosServiceRegistry registry,
+         AutoServiceRegistrationProperties autoServiceRegistrationProperties,
+         NacosRegistration registration) {
+      return new NacosAutoServiceRegistration(registry,
+            autoServiceRegistrationProperties, registration); // Nacos自动注册实例
+   }
+}
+
+
+2、
+package com.alibaba.cloud.nacos.registry;
+import java.util.List;
+import com.alibaba.cloud.nacos.NacosDiscoveryProperties;
+import com.alibaba.nacos.api.naming.NamingService;
+import com.alibaba.nacos.api.naming.pojo.Instance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cloud.client.serviceregistry.Registration;
+import org.springframework.cloud.client.serviceregistry.ServiceRegistry;
+import org.springframework.util.StringUtils;
+import static org.springframework.util.ReflectionUtils.rethrowRuntimeException;
+public class NacosServiceRegistry implements ServiceRegistry<Registration> {
+   private static final Logger log = LoggerFactory.getLogger(NacosServiceRegistry.class);
+   private final NacosDiscoveryProperties nacosDiscoveryProperties;
+   private final NamingService namingService;
+   public NacosServiceRegistry(NacosDiscoveryProperties nacosDiscoveryProperties) {
+      this.nacosDiscoveryProperties = nacosDiscoveryProperties;
+      this.namingService = nacosDiscoveryProperties.namingServiceInstance();
+   }
+   @Override
+   public void register(Registration registration) { // 服务注册
+      if (StringUtils.isEmpty(registration.getServiceId())) { // 是否为空
+         log.warn("No service to register for nacos client...");
+         return;
+      }
+      String serviceId = registration.getServiceId(); // 服务ID
+      String group = nacosDiscoveryProperties.getGroup(); // 获取注册组
+      Instance instance = getNacosInstanceFromRegistration(registration); // 获取实例
+      try {
+         namingService.registerInstance(serviceId, group, instance);
+         log.info("nacos registry, {} {} {}:{} register finished", group, serviceId,
+               instance.getIp(), instance.getPort());
+      }
+      catch (Exception e) {
+         log.error("nacos registry, {} register failed...{},", serviceId,
+               registration.toString(), e);
+         rethrowRuntimeException(e);
+      }
+   }
+   private Instance getNacosInstanceFromRegistration(Registration registration) {
+      Instance instance = new Instance(); // 定义注册实例
+      instance.setIp(registration.getHost());// 获取微服务的主机地址
+      instance.setPort(registration.getPort());// 获取微服务的端口号
+      instance.setWeight(nacosDiscoveryProperties.getWeight());// 获取权重
+      instance.setClusterName(nacosDiscoveryProperties.getClusterName());// 获取集群名称
+      instance.setMetadata(registration.getMetadata());// 获取元数据
+      return instance;
+   }
+}
+
+
+3、
+package com.alibaba.nacos.client.naming;
+@SuppressWarnings("PMD.ServiceOrDaoClassShouldEndWithImplRule")
+public class NacosNamingService implements NamingService {
+    private NamingClientProxy clientProxy;
+    @Override
+    public void registerInstance(String serviceName, String groupName, 
+		Instance instance) throws NacosException {
+        NamingUtils.checkInstanceIsLegal(instance);
+        clientProxy.registerService(serviceName, groupName, instance);
+    }
+}
+
+
+4、
+package com.alibaba.nacos.client.naming.remote.gprc;
+public class NamingGrpcClientProxy extends AbstractNamingClientProxy {
+    private final String namespaceId;
+    private final String uuid;
+    private final Long requestTimeout;
+    private final RpcClient rpcClient;
+    private final NamingGrpcConnectionEventListener namingGrpcConnectionEventListener;
+    @Override
+    public void registerService(String serviceName, String groupName, Instance instance) throws NacosException {
+        NAMING_LOGGER.info("[REGISTER-SERVICE] {} registering service {} with instance {}", namespaceId, serviceName, instance);
+        namingGrpcConnectionEventListener.cacheInstanceForRedo(serviceName, groupName, instance); // GRPC的监听
+        InstanceRequest request = new InstanceRequest(namespaceId, serviceName, groupName,
+                NamingRemoteConstants.REGISTER_INSTANCE, instance); // 实例请求
+        requestToServer(request, Response.class); // 最终的服务发送
+    }
+    private <T extends Response> T requestToServer(AbstractNamingRequest request, Class<T> responseClass) throws NacosException {
+        try {
+            request.putAllHeader(getSecurityHeaders());// 获取访问头信息
+            request.putAllHeader(getSpasHeaders(
+                    NamingUtils.getGroupedNameOptional(request.getServiceName(), request.getGroupName())));// 请求头信息
+            Response response =
+                    requestTimeout < 0 ? rpcClient.request(request) : rpcClient.request(request, requestTimeout); // 服务端响应
+            if (ResponseCode.SUCCESS.getCode() != response.getResultCode()) { // 判断状态
+                throw new NacosException(response.getErrorCode(), response.getMessage());
+            }
+            if (responseClass.isAssignableFrom(response.getClass())) {
+                return (T) response;
+            }
+            NAMING_LOGGER.error("Server return unexpected response '{}', expected response should be '{}'", response.getClass().getName(), responseClass.getName());
+        } catch (Exception e) {
+            throw new NacosException(NacosException.SERVER_ERROR, "Request nacos server failed: ", e);
+        }
+        throw new NacosException(NacosException.SERVER_ERROR, "Server return invalid response");
+    }
+}
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

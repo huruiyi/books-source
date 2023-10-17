@@ -1,0 +1,50 @@
+1、
+192.168.190.176 nameserver-cluster-a
+192.168.190.177 nameserver-cluster-b
+192.168.190.180 broker-cluster-a-node-1
+192.168.190.181 broker-cluster-a-node-2
+192.168.190.182 broker-cluster-a-node-3
+192.168.190.183 broker-cluster-b-node-1
+192.168.190.184 broker-cluster-b-node-2
+192.168.190.185 broker-cluster-b-node-3
+192.168.190.186 broker-cluster-c-node-1
+192.168.190.187 broker-cluster-c-node-2
+192.168.190.188 broker-cluster-c-node-3
+
+2、
+mv jdk jdk-11
+
+3、
+tar xzvf /var/ftp/jdk-8u191-linux-x64.tar.gz -C /usr/local/
+
+4、
+mv /usr/local/jdk1.8.0_191/ /usr/local/jdk
+
+5、
+vi /etc/sysconfig/network-scripts/ifcfg-ens33
+IPADDR=192.168.190.176
+
+6、
+vi /etc/hostname
+
+7、
+vi /etc/hosts
+
+192.168.190.176 nameserver-cluster-a
+192.168.190.177 nameserver-cluster-b
+192.168.190.180 broker-cluster-a-master
+192.168.190.181 broker-cluster-a-slave-1
+192.168.190.182 broker-cluster-a-slave-2
+192.168.190.183 broker-cluster-b-master
+192.168.190.184 broker-cluster-b-slave-1
+192.168.190.185 broker-cluster-b-slave-2
+192.168.190.186 broker-cluster-c-master
+192.168.190.187 broker-cluster-c-slave-1
+192.168.190.188 broker-cluster-c-slave-2
+
+
+8、
+
+
+9、
+

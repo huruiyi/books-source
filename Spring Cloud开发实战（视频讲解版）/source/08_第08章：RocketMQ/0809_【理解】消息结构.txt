@@ -1,0 +1,506 @@
+1、
+/usr/local/rocketmq/bin/mqadmin updateTopic -t TopicYootk -n rocketmq-server:9876 -c DefaultCluster
+
+/usr/local/rocketmq/bin/mqadmin sendMessage -t TopicYootk -n rocketmq-server:9876 -p www.yootk.com
+
+2、
+/usr/local/rocketmq/bin/mqadmin consumeMessage -t TopicYootk -n rocketmq-server:9876 -g muyan-group
+
+3、
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.rocketmq.common.message;
+
+import org.apache.rocketmq.common.sysflag.MessageSysFlag;
+
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Message implements Serializable {
+    private static final long serialVersionUID = 8445773977080406428L;
+
+    private String topic;
+    private int flag;
+
+    private Map<String, String> properties;
+    private byte[] body;
+    private String transactionId;
+
+    public Message() {
+    }
+
+    public Message(String topic, byte[] body) {
+        this(topic, "", "", 0, body, true);
+    }
+
+    public Message(String topic, String tags, String keys, int flag, byte[] body, boolean waitStoreMsgOK) {
+        this.topic = topic;
+        this.flag = flag;
+        this.body = body;
+
+        if (tags != null && tags.length() > 0)
+            this.setTags(tags);
+
+        if (keys != null && keys.length() > 0)
+            this.setKeys(keys);
+
+        this.setWaitStoreMsgOK(waitStoreMsgOK);
+    }
+
+    public Message(String topic, String tags, byte[] body) {
+        this(topic, tags, "", 0, body, true);
+    }
+
+    public Message(String topic, String tags, String keys, byte[] body) {
+        this(topic, tags, keys, 0, body, true);
+    }
+
+    public void setKeys(String keys) {
+        this.putProperty(MessageConst.PROPERTY_KEYS, keys);
+    }
+
+    void putProperty(final String name, final String value) {
+        if (null == this.properties) {
+            this.properties = new HashMap<String, String>();
+        }
+
+        this.properties.put(name, value);
+    }
+
+    void clearProperty(final String name) {
+        if (null != this.properties) {
+            this.properties.remove(name);
+        }
+    }
+
+    public void putUserProperty(final String name, final String value) {
+        if (MessageConst.STRING_HASH_SET.contains(name)) {
+            throw new RuntimeException(String.format(
+                "The Property<%s> is used by system, input another please", name));
+        }
+
+        if (value == null || value.trim().isEmpty()
+            || name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "The name or value of property can not be null or blank string!"
+            );
+        }
+
+        this.putProperty(name, value);
+    }
+
+    public String getUserProperty(final String name) {
+        return this.getProperty(name);
+    }
+
+    public String getProperty(final String name) {
+        if (null == this.properties) {
+            this.properties = new HashMap<String, String>();
+        }
+
+        return this.properties.get(name);
+    }
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public void setTopic(String topic) {
+        this.topic = topic;
+    }
+
+    public String getTags() {
+        return this.getProperty(MessageConst.PROPERTY_TAGS);
+    }
+
+    public void setTags(String tags) {
+        this.putProperty(MessageConst.PROPERTY_TAGS, tags);
+    }
+
+    public String getKeys() {
+        return this.getProperty(MessageConst.PROPERTY_KEYS);
+    }
+
+    public void setKeys(Collection<String> keys) {
+        StringBuffer sb = new StringBuffer();
+        for (String k : keys) {
+            sb.append(k);
+            sb.append(MessageConst.KEY_SEPARATOR);
+        }
+
+        this.setKeys(sb.toString().trim());
+    }
+
+    public int getDelayTimeLevel() {
+        String t = this.getProperty(MessageConst.PROPERTY_DELAY_TIME_LEVEL);
+        if (t != null) {
+            return Integer.parseInt(t);
+        }
+
+        return 0;
+    }
+
+    public void setDelayTimeLevel(int level) {
+        this.putProperty(MessageConst.PROPERTY_DELAY_TIME_LEVEL, String.valueOf(level));
+    }
+
+    public boolean isWaitStoreMsgOK() {
+        String result = this.getProperty(MessageConst.PROPERTY_WAIT_STORE_MSG_OK);
+        if (null == result)
+            return true;
+
+        return Boolean.parseBoolean(result);
+    }
+
+    public void setWaitStoreMsgOK(boolean waitStoreMsgOK) {
+        this.putProperty(MessageConst.PROPERTY_WAIT_STORE_MSG_OK, Boolean.toString(waitStoreMsgOK));
+    }
+
+    public void setInstanceId(String instanceId) {
+        this.putProperty(MessageConst.PROPERTY_INSTANCE_ID, instanceId);
+    }
+
+    public int getFlag() {
+        return flag;
+    }
+
+    public void setFlag(int flag) {
+        this.flag = flag;
+    }
+
+    public byte[] getBody() {
+        return body;
+    }
+
+    public void setBody(byte[] body) {
+        this.body = body;
+    }
+
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    void setProperties(Map<String, String> properties) {
+        this.properties = properties;
+    }
+
+    public String getBuyerId() {
+        return getProperty(MessageConst.PROPERTY_BUYER_ID);
+    }
+
+    public void setBuyerId(String buyerId) {
+        putProperty(MessageConst.PROPERTY_BUYER_ID, buyerId);
+    }
+
+    public String getTransactionId() {
+        return transactionId;
+    }
+
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    @Override
+    public String toString() {
+        return "Message{" +
+            "topic='" + topic + '\'' +
+            ", flag=" + flag +
+            ", properties=" + properties +
+            ", body=" + Arrays.toString(body) +
+            ", transactionId='" + transactionId + '\'' +
+            '}';
+    }
+}
+
+
+4、
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.rocketmq.common.message;
+
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import org.apache.rocketmq.common.TopicFilterType;
+import org.apache.rocketmq.common.sysflag.MessageSysFlag;
+
+public class MessageExt extends Message {
+    private static final long serialVersionUID = 5720810158625748049L;
+
+    private String brokerName;
+
+    private int queueId;
+
+    private int storeSize;
+
+    private long queueOffset;
+    private int sysFlag;
+    private long bornTimestamp;
+    private SocketAddress bornHost;
+
+    private long storeTimestamp;
+    private SocketAddress storeHost;
+    private String msgId;
+    private long commitLogOffset;
+    private int bodyCRC;
+    private int reconsumeTimes;
+
+    private long preparedTransactionOffset;
+
+    public MessageExt() {
+    }
+
+    public MessageExt(int queueId, long bornTimestamp, SocketAddress bornHost, long storeTimestamp,
+        SocketAddress storeHost, String msgId) {
+        this.queueId = queueId;
+        this.bornTimestamp = bornTimestamp;
+        this.bornHost = bornHost;
+        this.storeTimestamp = storeTimestamp;
+        this.storeHost = storeHost;
+        this.msgId = msgId;
+    }
+
+    public static TopicFilterType parseTopicFilterType(final int sysFlag) {
+        if ((sysFlag & MessageSysFlag.MULTI_TAGS_FLAG) == MessageSysFlag.MULTI_TAGS_FLAG) {
+            return TopicFilterType.MULTI_TAG;
+        }
+
+        return TopicFilterType.SINGLE_TAG;
+    }
+
+    public static ByteBuffer socketAddress2ByteBuffer(final SocketAddress socketAddress, final ByteBuffer byteBuffer) {
+        InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
+        InetAddress address = inetSocketAddress.getAddress();
+        if (address instanceof Inet4Address) {
+            byteBuffer.put(inetSocketAddress.getAddress().getAddress(), 0, 4);
+        } else {
+            byteBuffer.put(inetSocketAddress.getAddress().getAddress(), 0, 16);
+        }
+        byteBuffer.putInt(inetSocketAddress.getPort());
+        byteBuffer.flip();
+        return byteBuffer;
+    }
+
+    public static ByteBuffer socketAddress2ByteBuffer(SocketAddress socketAddress) {
+        InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
+        InetAddress address = inetSocketAddress.getAddress();
+        ByteBuffer byteBuffer;
+        if (address instanceof Inet4Address) {
+            byteBuffer = ByteBuffer.allocate(4 + 4);
+        } else {
+            byteBuffer = ByteBuffer.allocate(16 + 4);
+        }
+        return socketAddress2ByteBuffer(socketAddress, byteBuffer);
+    }
+
+    public ByteBuffer getBornHostBytes() {
+        return socketAddress2ByteBuffer(this.bornHost);
+    }
+
+    public ByteBuffer getBornHostBytes(ByteBuffer byteBuffer) {
+        return socketAddress2ByteBuffer(this.bornHost, byteBuffer);
+    }
+
+    public ByteBuffer getStoreHostBytes() {
+        return socketAddress2ByteBuffer(this.storeHost);
+    }
+
+    public ByteBuffer getStoreHostBytes(ByteBuffer byteBuffer) {
+        return socketAddress2ByteBuffer(this.storeHost, byteBuffer);
+    }
+
+    public String getBrokerName() {
+        return brokerName;
+    }
+
+    public void setBrokerName(String brokerName) {
+        this.brokerName = brokerName;
+    }
+
+    public int getQueueId() {
+        return queueId;
+    }
+
+    public void setQueueId(int queueId) {
+        this.queueId = queueId;
+    }
+
+    public long getBornTimestamp() {
+        return bornTimestamp;
+    }
+
+    public void setBornTimestamp(long bornTimestamp) {
+        this.bornTimestamp = bornTimestamp;
+    }
+
+    public SocketAddress getBornHost() {
+        return bornHost;
+    }
+
+    public void setBornHost(SocketAddress bornHost) {
+        this.bornHost = bornHost;
+    }
+
+    public String getBornHostString() {
+        if (null != this.bornHost) {
+            InetAddress inetAddress = ((InetSocketAddress) this.bornHost).getAddress();
+
+            return null != inetAddress ? inetAddress.getHostAddress() : null;
+        }
+
+        return null;
+    }
+
+    public String getBornHostNameString() {
+        if (null != this.bornHost) {
+            InetAddress inetAddress = ((InetSocketAddress) this.bornHost).getAddress();
+
+            return null != inetAddress ? inetAddress.getHostName() : null;
+        }
+
+        return null;
+    }
+
+    public long getStoreTimestamp() {
+        return storeTimestamp;
+    }
+
+    public void setStoreTimestamp(long storeTimestamp) {
+        this.storeTimestamp = storeTimestamp;
+    }
+
+    public SocketAddress getStoreHost() {
+        return storeHost;
+    }
+
+    public void setStoreHost(SocketAddress storeHost) {
+        this.storeHost = storeHost;
+    }
+
+    public String getMsgId() {
+        return msgId;
+    }
+
+    public void setMsgId(String msgId) {
+        this.msgId = msgId;
+    }
+
+    public int getSysFlag() {
+        return sysFlag;
+    }
+
+    public void setSysFlag(int sysFlag) {
+        this.sysFlag = sysFlag;
+    }
+
+    public void setStoreHostAddressV6Flag() { this.sysFlag = this.sysFlag | MessageSysFlag.STOREHOSTADDRESS_V6_FLAG; }
+
+    public void setBornHostV6Flag() { this.sysFlag = this.sysFlag | MessageSysFlag.BORNHOST_V6_FLAG; }
+
+    public int getBodyCRC() {
+        return bodyCRC;
+    }
+
+    public void setBodyCRC(int bodyCRC) {
+        this.bodyCRC = bodyCRC;
+    }
+
+    public long getQueueOffset() {
+        return queueOffset;
+    }
+
+    public void setQueueOffset(long queueOffset) {
+        this.queueOffset = queueOffset;
+    }
+
+    public long getCommitLogOffset() {
+        return commitLogOffset;
+    }
+
+    public void setCommitLogOffset(long physicOffset) {
+        this.commitLogOffset = physicOffset;
+    }
+
+    public int getStoreSize() {
+        return storeSize;
+    }
+
+    public void setStoreSize(int storeSize) {
+        this.storeSize = storeSize;
+    }
+
+    public int getReconsumeTimes() {
+        return reconsumeTimes;
+    }
+
+    public void setReconsumeTimes(int reconsumeTimes) {
+        this.reconsumeTimes = reconsumeTimes;
+    }
+
+    public long getPreparedTransactionOffset() {
+        return preparedTransactionOffset;
+    }
+
+    public void setPreparedTransactionOffset(long preparedTransactionOffset) {
+        this.preparedTransactionOffset = preparedTransactionOffset;
+    }
+
+    @Override
+    public String toString() {
+        return "MessageExt [brokerName=" + brokerName + ", queueId=" + queueId + ", storeSize=" + storeSize + ", queueOffset=" + queueOffset
+            + ", sysFlag=" + sysFlag + ", bornTimestamp=" + bornTimestamp + ", bornHost=" + bornHost
+            + ", storeTimestamp=" + storeTimestamp + ", storeHost=" + storeHost + ", msgId=" + msgId
+            + ", commitLogOffset=" + commitLogOffset + ", bodyCRC=" + bodyCRC + ", reconsumeTimes="
+            + reconsumeTimes + ", preparedTransactionOffset=" + preparedTransactionOffset
+            + ", toString()=" + super.toString() + "]";
+    }
+}
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

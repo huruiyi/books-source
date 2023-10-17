@@ -1,0 +1,55 @@
+1、
+// https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator
+implementation group: 'org.springframework.boot', name: 'spring-boot-starter-actuator', version: '2.5.5'
+
+
+2、
+project(":gateway-9501") {  // 网关模块
+    dependencies {
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+        implementation('org.springframework.cloud:spring-cloud-starter-gateway') // 网关依赖
+        implementation('org.springframework.boot:spring-boot-starter-actuator') // Actuator依赖库
+    }
+}
+
+3、
+management:
+  server:
+    port: 9090 # Actuator端口
+  endpoints:
+    web:
+      exposure:
+        include: "*" # 开启全部的监控终端
+      base-path: /actuator  # 访问子路径
+
+4、
+gateway-9501:9090/actuator/gateway/globalfilters
+
+5、
+{
+    "org.springframework.cloud.gateway.filter.WebsocketRoutingFilter@569c2fce": 2147483646,
+    "org.springframework.cloud.gateway.filter.ForwardPathFilter@18408d0c": 0,
+    "org.springframework.cloud.gateway.filter.RouteToRequestUrlFilter@560805d0": 10000,
+    "org.springframework.cloud.gateway.filter.RemoveCachedBodyFilter@25cd6be9": -2147483648,
+    "org.springframework.cloud.gateway.filter.NettyRoutingFilter@5d737ed0": 2147483647,
+    "org.springframework.cloud.gateway.filter.ForwardRoutingFilter@104b643f": 2147483647,
+    "org.springframework.cloud.gateway.filter.GatewayMetricsFilter@402c9648": 0,
+    "org.springframework.cloud.gateway.filter.AdaptCachedBodyGlobalFilter@2f8e7f7c": -2147482648,
+    "org.springframework.cloud.gateway.filter.NettyWriteResponseFilter@741f852": -1,
+    "org.springframework.cloud.gateway.filter.LoadBalancerClientFilter@76d0bcdc": 10100
+}
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

@@ -1,0 +1,62 @@
+1、
+package com.yootk.test;
+
+import com.netflix.client.config.CommonClientConfigKey;
+import com.netflix.client.config.DefaultClientConfigImpl;
+import com.netflix.loadbalancer.ConfigurationBasedServerList;
+import com.netflix.loadbalancer.PollingServerListUpdater;
+import com.netflix.loadbalancer.ServerListUpdater;
+import com.netflix.loadbalancer.ZoneAwareLoadBalancer;
+
+import java.util.concurrent.TimeUnit;
+
+public class TestServerListUpdater {
+    public static void main(String[] args) throws Exception {
+        // 实例数据，通过Nacos抓取到的信息也就是以下的内容
+        String instans = "10.0.19.1:8001,10.9.15.2:8002,10.8.13.5:8003";
+        DefaultClientConfigImpl clientConfig = new DefaultClientConfigImpl();
+        clientConfig.set(CommonClientConfigKey.ListOfServers, instans); // 保存实例数据
+        ConfigurationBasedServerList basedServerList = new ConfigurationBasedServerList();
+        basedServerList.initWithNiwsConfig(clientConfig); // 通过客户端配置类实现服务列表初始化
+        ServerListUpdater updater = new PollingServerListUpdater(); // 服务列表更新
+        updater.start(new ServerListUpdater.UpdateAction() { // 直接编写一个调用
+            @Override
+            public void doUpdate() {
+                System.out.println("【实例更新】最后更新时间：" + updater.getLastUpdate() +
+                        "、上次更新间隔时长：" + updater.getDurationSinceLastUpdateMs() +
+                        "、错误更新的周期数量：" + updater.getNumberMissedCycles() +
+                        "、使用线程数量：" + updater.getCoreThreads());
+                // 可以在此处实现数据的更新抓取（依然要通过Nacos完成）
+            }
+        });
+        ZoneAwareLoadBalancer loadBalancer = new ZoneAwareLoadBalancer();
+        loadBalancer.setServerListImpl(basedServerList);
+        loadBalancer.setServerListUpdater(updater); // 服务列表更新器
+        TimeUnit.SECONDS.sleep(Long.MAX_VALUE);
+    }
+}
+
+
+2、
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

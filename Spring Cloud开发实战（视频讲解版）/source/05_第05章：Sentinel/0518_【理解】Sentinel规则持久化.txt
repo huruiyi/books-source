@@ -1,0 +1,44 @@
+1、
+package com.alibaba.csp.sentinel.datasource;
+import com.alibaba.csp.sentinel.property.SentinelProperty;
+public interface ReadableDataSource<S, T> {
+    T loadConfig() throws Exception; // 读取配置项
+    S readSource() throws Exception; // 读取原生配置的数据项
+    SentinelProperty<T> getProperty();// 获取Sentinel配置属性
+    void close() throws Exception; // 关闭读取数据源
+}
+
+
+2、
+package com.alibaba.csp.sentinel.property;
+public interface SentinelProperty<T> {
+    void addListener(PropertyListener<T> listener); // 配置属性的监听器
+    void removeListener(PropertyListener<T> listener); // 移除属性监听器
+    boolean updateValue(T newValue); // 更新属性内容
+}
+
+
+3、
+tar xzvf /var/ftp/nacos-server-2.0.2.tar.gz -C /usr/local/
+
+4、
+/usr/local/nacos/bin/startup.sh -m standalone
+
+5、
+firewall-cmd --zone=public --add-port=8848/tcp --permanent
+firewall-cmd --zone=public --add-port=9848/tcp --permanent
+firewall-cmd --zone=public --add-port=7848/tcp --permanent
+firewall-cmd --zone=public --add-port=9849/tcp --permanent
+firewall-cmd --reload
+
+6、
+sentinel-nacos-server:8848/nacos
+
+7、
+
+
+8、
+
+
+9、
+

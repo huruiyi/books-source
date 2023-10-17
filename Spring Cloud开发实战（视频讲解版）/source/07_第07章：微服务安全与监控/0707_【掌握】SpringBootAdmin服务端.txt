@@ -1,0 +1,151 @@
+1、
+// https://mvnrepository.com/artifact/de.codecentric/spring-boot-admin-starter-server
+implementation group: 'de.codecentric', name: 'spring-boot-admin-starter-server', version: '2.5.2'
+
+
+2、
+ext.versions = [                // 定义全部的依赖库版本号
+    springboot           : '2.2.5.RELEASE',      // SpringBoot版本号
+    springcloud          : 'Hoxton.SR3', // SpringCloud版本号
+    alibabacloud         : '2.2.1.RELEASE', // SpringCloudAlibaba版本号
+    lombok               : '1.18.20', // Lombok版本号
+    junit                : '5.6.3', // 配置JUnit测试工具的版本编号
+    junitPlatformLauncher: '1.6.3',  // JUnit测试工具运行平台版本编号
+    mybatisPlus          : '3.4.3', // MyBatisPlus的版本号
+    mysql                : '8.0.25', // MySQL数据库驱动版本
+    druid                : '1.2.6', // Druid版本号
+    swagger              : '3.0.0', // Swagger版本号
+    nacos                : '2.0.2', // Nacos版本号
+    httpclient           : '4.5.13', // HttpClient版本号
+    feignHttpclient      : '11.6', // FeignHttpClient版本号
+    sentinel             : '1.8.2', // Sentinel版本号
+    caffeine             : '3.0.4', // Caffeine缓存组件版本号
+    micrometer           : '1.7.0', // Prometheus相关监控依赖，与服务部署的版本号相同
+    servlet              : '4.0.1', // Servlet的依赖库
+    commonsCodec         : '1.15', // codec依赖库
+    jjwt                 : '0.9.1', // jwt依赖库
+    jaxb                 : '2.3.0', // JAXB依赖库
+    admin                : '2.3.0', // SpringBootAdmin依赖版本
+]
+ext.libraries = [            // 依赖库引入配置
+     'spring-boot-gradle-plugin'        :
+             "org.springframework.boot:spring-boot-gradle-plugin:${versions.springboot}",
+     'spring-cloud-dependencies'        :
+             "org.springframework.cloud:spring-cloud-dependencies:${versions.springcloud}",
+     'spring-cloud-alibaba-dependencies':
+             "com.alibaba.cloud:spring-cloud-alibaba-dependencies:${versions.alibabacloud}",
+     // 以下的配置为与项目用例测试有关的依赖
+     'junit-jupiter-api'                :
+             "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
+     'junit-vintage-engine'             :
+             "org.junit.vintage:junit-vintage-engine:${versions.junit}",
+     'junit-jupiter-engine'             :
+             "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+     'junit-platform-launcher'          :
+             "org.junit.platform:junit-platform-launcher:${versions.junitPlatformLauncher}",
+     'junit-platform-engine'            :
+             "org.junit.platform:junit-platform-engine:${versions.junitPlatformLauncher}",
+     'junit-jupiter-params'             :
+             "org.junit.jupiter:junit-jupiter-params:${versions.junit}",
+     'junit-bom'                        : "org.junit:junit-bom:${versions.junit}",
+     'junit-platform-commons'           :
+             "org.junit.platform:junit-platform-commons:${versions.junitPlatformLauncher}",
+     // 以下的配置为Lombok组件有关的依赖
+     'lombok'                           : "org.projectlombok:lombok:${versions.lombok}",
+     // 以下的配置为数据库开发有关的依赖
+     'mybatis-plus-boot-starter'        : "com.baomidou:mybatis-plus-boot-starter:${versions.mybatisPlus}",
+     'mysql-connector-java'             : "mysql:mysql-connector-java:${versions.mysql}",
+     'druid'                            : "com.alibaba:druid:${versions.druid}",
+     // 以下的配置为Swagger有关的依赖库
+    'springfox-boot-starter'            : "io.springfox:springfox-boot-starter:${versions.swagger}",
+     // 以下的配置为Nacos有关的依赖库
+    'nacos-client'                      : "com.alibaba.nacos:nacos-client:${versions.nacos}",
+    // 以下的配置为Feign与HttpClient有关的依赖库
+    'httpclient'                        : "org.apache.httpcomponents:httpclient:${versions.httpclient}",
+    'feign-httpclient'                  : "io.github.openfeign:feign-httpclient:${versions.feignHttpclient}",
+    // 以下的配置为Sentinel有关的组件依赖
+    'sentinel-datasource-nacos'         : "com.alibaba.csp:sentinel-datasource-nacos:${versions.sentinel}",
+    // 以下的配置为LoadBalancer所需要的Caffeine组件有关依赖
+    'caffeine'                          : "com.github.ben-manes.caffeine:caffeine:${versions.caffeine}",
+    // 以下的配置为Prometheus服务整合
+    'micrometer-registry-prometheus': "io.micrometer:micrometer-registry-prometheus:${versions.micrometer}",
+    'micrometer-core': "io.micrometer:micrometer-core:${versions.micrometer}",
+    // 以下的配置为JWT的服务整合
+    'servlet-api'                       : "javax.servlet:javax.servlet-api:${versions.servlet}",
+    'commons-codec'                     : "commons-codec:commons-codec:${versions.commonsCodec}",
+    'jjwt'                              : "io.jsonwebtoken:jjwt:${versions.jjwt}",
+    'jaxb-api'                          : "javax.xml.bind:jaxb-api:${versions.jaxb}",
+    'jaxb-impl'                         : "com.sun.xml.bind:jaxb-impl:${versions.jaxb}",
+    'jaxb-core'                         : "com.sun.xml.bind:jaxb-core:${versions.jaxb}",
+    // 以下的配置为SpringBootAdmin服务整合
+    'spring-boot-admin-starter-server'  : "de.codecentric:spring-boot-admin-starter-server:${versions.admin}"
+]
+
+
+3、
+server: # 服务端配置
+  port: 8000 # 8000端口
+spring:
+  application: # 配置应用信息
+    name: microcloud.admin # 是微服务的名称
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        weight: 80
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        register-enabled: false # 管理端不注册
+        metadata:  # 根据自身的需要配置元数据
+          version: 1.0 # 自定义元数据项
+          company: 沐言科技 # 自定义元数据项
+          url: www.yootk.com # 自定义元数据项
+          author: 李兴华（爆可爱的小李老师） # 自定义元数据项
+yootk:
+  security:
+    config:
+      jwt:
+        sign: muyan
+        issuer: MuyanYootk
+        secret: www.yootk.com
+        expire: 100000 # 单位：秒
+      password:
+        encrypt:
+          repeat: 5
+          salt: www.yootk.com
+
+4、
+package com.yootk.admin;
+
+import de.codecentric.boot.admin.server.config.EnableAdminServer;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+@EnableAdminServer // 启用管理服务端
+public class StartSpringBootAdmin8000 {
+    public static void main(String[] args) {
+        SpringApplication.run(StartSpringBootAdmin8000.class, args);
+    }
+}
+
+
+5、
+127.0.0.1	microcloud-admin
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

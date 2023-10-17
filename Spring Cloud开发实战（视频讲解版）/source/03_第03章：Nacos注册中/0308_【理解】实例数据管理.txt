@@ -1,0 +1,121 @@
+1、
+package com.yootk.nacos;
+
+import com.alibaba.nacos.api.PropertyKeyConst;
+import com.alibaba.nacos.api.naming.NamingFactory;
+import com.alibaba.nacos.api.naming.NamingService;
+
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+
+public class RegisterNacosInstance { // 服务实例注册
+    public static final String NACOS_SERVER = "nacos-server:8848"; // Naco连接地址
+    // 此时的命名空间使用的是自定义命名空间（名称为“muyan”，去Nacos中查找）
+    public static final String NAMESPACE = "0007211f-2731-495f-bf7e-6845bda78727"; // 命名空间
+    public static final String GROUP = "MICROCLOUD_GROUP"; // 分组
+    public static final String INSTANCE_ID = "micro.provider.dept"; // 存储的KEY
+
+    public static void main(String[] args) throws Exception { // 沐言科技：www.yootk.com
+        Properties properties = new Properties(); // 将Nacos的相关属性进行配置
+        properties.put(PropertyKeyConst.SERVER_ADDR, NACOS_SERVER); // 服务地址属性
+        properties.put(PropertyKeyConst.NAMESPACE, NAMESPACE); // 命名空间
+        // 此时要发布的并不是配置项，而是服务项，所以就需要创建命名服务实例
+        NamingService naming = NamingFactory.createNamingService(properties);
+        // 准备向Nacos注册中心进行服务的注册处理
+        naming.registerInstance(INSTANCE_ID, GROUP, "192.168.9.19",
+                8888, "DeptProviderCluster");
+        // 当服务注册成功之后就需要持续的向Nacos发送心跳，不发送心跳表示嗝屁
+        TimeUnit.MINUTES.sleep(Long.MAX_VALUE); // 保证进程不关闭
+    }
+}
+
+
+2、
+package com.yootk.nacos;
+
+import com.alibaba.nacos.api.PropertyKeyConst;
+import com.alibaba.nacos.api.naming.NamingFactory;
+import com.alibaba.nacos.api.naming.NamingService;
+import com.alibaba.nacos.api.naming.pojo.Instance;
+
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+
+public class NacosInstanceList { // 服务实例注册
+    public static final String NACOS_SERVER = "nacos-server:8848"; // Naco连接地址
+    // 此时的命名空间使用的是自定义命名空间（名称为“muyan”，去Nacos中查找）
+    public static final String NAMESPACE = "0007211f-2731-495f-bf7e-6845bda78727"; // 命名空间
+    public static final String GROUP = "MICROCLOUD_GROUP"; // 分组
+    public static final String INSTANCE_ID = "micro.provider.dept"; // 存储的KEY
+
+    public static void main(String[] args) throws Exception { // 沐言科技：www.yootk.com
+        Properties properties = new Properties(); // 将Nacos的相关属性进行配置
+        properties.put(PropertyKeyConst.SERVER_ADDR, NACOS_SERVER); // 服务地址属性
+        properties.put(PropertyKeyConst.NAMESPACE, NAMESPACE); // 命名空间
+        // 此时要发布的并不是配置项，而是服务项，所以就需要创建命名服务实例
+        NamingService naming = NamingFactory.createNamingService(properties);
+        List<Instance> instances = naming.getAllInstances(INSTANCE_ID, GROUP); // 分组很重要
+        for (Instance instance : instances) {
+            System.err.println(instance);
+        }
+        TimeUnit.MINUTES.sleep(Long.MAX_VALUE); // 保证进程不关闭
+    }
+}
+
+
+3、
+package com.yootk.nacos;
+
+import com.alibaba.nacos.api.PropertyKeyConst;
+import com.alibaba.nacos.api.naming.NamingFactory;
+import com.alibaba.nacos.api.naming.NamingService;
+import com.alibaba.nacos.api.naming.listener.NamingEvent;
+import com.alibaba.nacos.api.naming.pojo.Instance;
+
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+
+public class NacosInstanceListener { // 服务实例注册
+    public static final String NACOS_SERVER = "nacos-server:8848"; // Naco连接地址
+    // 此时的命名空间使用的是自定义命名空间（名称为“muyan”，去Nacos中查找）
+    public static final String NAMESPACE = "0007211f-2731-495f-bf7e-6845bda78727"; // 命名空间
+    public static final String GROUP = "MICROCLOUD_GROUP"; // 分组
+    public static final String INSTANCE_ID = "micro.provider.dept"; // 存储的KEY
+
+    public static void main(String[] args) throws Exception { // 沐言科技：www.yootk.com
+        Properties properties = new Properties(); // 将Nacos的相关属性进行配置
+        properties.put(PropertyKeyConst.SERVER_ADDR, NACOS_SERVER); // 服务地址属性
+        properties.put(PropertyKeyConst.NAMESPACE, NAMESPACE); // 命名空间
+        // 此时要发布的并不是配置项，而是服务项，所以就需要创建命名服务实例
+        NamingService naming = NamingFactory.createNamingService(properties);
+        naming.subscribe(INSTANCE_ID, GROUP,
+                event -> {
+                    if (event instanceof NamingEvent) { // 实例更改事件
+                        System.out.println(((NamingEvent) event).getServiceName()); // 服务名称
+                        System.out.println(((NamingEvent) event).getInstances()); // 实例的列表
+                    }
+                });
+        TimeUnit.MINUTES.sleep(Long.MAX_VALUE); // 保证进程不关闭
+    }
+}
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

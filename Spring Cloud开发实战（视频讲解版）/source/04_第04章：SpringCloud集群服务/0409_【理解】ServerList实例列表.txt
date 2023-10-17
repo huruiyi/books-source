@@ -1,0 +1,107 @@
+1、
+/*
+*
+* Copyright 2013 Netflix, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+*/
+package com.netflix.loadbalancer;
+
+import java.util.List;
+
+/**
+ * Interface that defines the methods sed to obtain the List of Servers
+ * @author stonse
+ *
+ * @param <T>
+ */
+public interface ServerList<T extends Server> {
+
+    public List<T> getInitialListOfServers();
+    
+    /**
+     * Return updated list of servers. This is called say every 30 secs
+     * (configurable) by the Loadbalancer's Ping cycle
+     * 
+     */
+    public List<T> getUpdatedListOfServers();   
+
+}
+
+
+2、
+package com.yootk.consumer.ribbon;
+
+import com.netflix.loadbalancer.Server;
+import com.netflix.loadbalancer.ServerList;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+@Component
+@Slf4j
+public class DefaultServerList implements ServerList { // 自定义的服务列表
+    @Override
+    public List getInitialListOfServers() { // 初始化服务列表
+        return null;
+    }
+    @Override
+    public List getUpdatedListOfServers() { // 获取更新后的服务列表
+        List<Server> allServers = new ArrayList<>(); // 定义保存服务列表
+        allServers.add(new Server("127.0.0.1", 8001)); // 手工添加列表
+        allServers.add(new Server("127.0.0.1", 8002)); // 手工添加列表
+        log.info("更新服务列表：{}", allServers);
+        return allServers;
+    }
+}
+
+
+3、
+package com.yootk.test;
+
+import com.netflix.client.config.CommonClientConfigKey;
+import com.netflix.client.config.DefaultClientConfigImpl;
+import com.netflix.loadbalancer.ConfigurationBasedServerList;
+
+public class TestConfigurationBasedServerList { // 李兴华高薪就业编程训练营
+    public static void main(String[] args) { // 沐言科技：www.yootk.com
+        // 通过字符串定义了所有可以使用的服务实例数据，中间使用“,”分割
+        String instances = "10.9.19.1:8001,10.9.19.2:8002,10.9.19.3:8003";
+        DefaultClientConfigImpl clientConfig = new DefaultClientConfigImpl(); // 默认的IClientConfig接口
+        clientConfig.set(CommonClientConfigKey.ListOfServers, instances); // 实例数据
+        ConfigurationBasedServerList serverList = new ConfigurationBasedServerList();
+        serverList.initWithNiwsConfig(clientConfig); // 初始化配置
+        System.out.println(serverList.getUpdatedListOfServers());
+    }
+}
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

@@ -1,0 +1,56 @@
+1、
+project(":sentinel-token-server") {
+    dependencies { // 配置模块所需要的依赖库
+        implementation("org.springframework.boot:spring-boot-starter-web") // SpringBoot依赖
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel') {
+            exclude group: 'com.alibaba.csp', module: 'sentinel-cluster-client-default'
+        }
+    }
+}
+
+2、
+package com.yootk.sentinel;
+
+import com.alibaba.csp.sentinel.cluster.server.ClusterTokenServer;
+import com.alibaba.csp.sentinel.cluster.server.SentinelDefaultTokenServer;
+import com.alibaba.csp.sentinel.cluster.server.config.ClusterServerConfigManager;
+import com.alibaba.csp.sentinel.cluster.server.config.ServerTransportConfig;
+
+public class StartTokenServerApplication {
+    // -Dcsp.sentinel.dashboard.server=sentinel-server:8888 -Dcsp.sentinel.api.port=8719
+    // -Dproject.name=sentinel-token-server -Dcsp.sentinel.log.use.pid=true
+    static {    // 使用系统属性代替启动参数
+        System.setProperty("csp.sentinel.dashboard.server", "sentinel-server:8888");            // 控制台地址
+        System.setProperty("csp.sentinel.api.port", "8719");    // sentinel端口
+        System.setProperty("project.name", "token-server");        // 服务名称
+        System.setProperty("csp.sentinel.log.use.pid", "true");    // 设置pid（可选）
+    }
+
+    public static void main(String[] args) throws Exception {
+        ClusterTokenServer tokenServer = new SentinelDefaultTokenServer(); // 实例化Token集群管理
+        ClusterServerConfigManager.loadGlobalTransportConfig(new ServerTransportConfig().setIdleSeconds(600).setPort(10217));
+        tokenServer.start();// 启动服务器
+    }
+}
+
+
+3、
+127.0.0.1	sentinel-token-server
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

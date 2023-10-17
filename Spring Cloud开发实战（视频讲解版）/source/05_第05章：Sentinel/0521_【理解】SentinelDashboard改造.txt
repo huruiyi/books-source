@@ -1,0 +1,97 @@
+1、
+# 添加与Nacos数据源有关的连接配置项（此处不能够使用具有认证支持的Nacos）
+nacos.address=sentinel-nacos-server:8848
+nacos.namespace=51586a27-b10d-4165-9cd2-38f1464c780d
+nacos.clusterName=SentinelCluster
+
+2、
+        <dependency>
+            <groupId>com.alibaba.csp</groupId>
+            <artifactId>sentinel-datasource-nacos</artifactId>
+           <!-- <scope>test</scope>-->
+        </dependency>
+
+3、
+
+/*
+ * Copyright 1999-2018 Alibaba Group Holding Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.alibaba.csp.sentinel.dashboard.rule.nacos;
+
+import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.FlowRuleEntity;
+import com.alibaba.csp.sentinel.datasource.Converter;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.nacos.api.PropertyKeyConst;
+import com.alibaba.nacos.api.config.ConfigFactory;
+import com.alibaba.nacos.api.config.ConfigService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
+import java.util.Properties;
+
+/**
+ * @author Eric Zhao
+ * @since 1.4.0
+ */
+@Configuration
+public class NacosConfig {
+    @Value("${nacos.address}") // application.yml中配置的属性内容
+    private String address;
+    @Value("${nacos.namespace}") // application.yml中配置的属性内容
+    private String namespace;
+    @Value("${nacos.clusterName}") // application.yml中配置的属性内容
+    private String clusterName;
+    @Bean
+    public Converter<List<FlowRuleEntity>, String> flowRuleEntityEncoder() {
+        return JSON::toJSONString;
+    }
+
+    @Bean
+    public Converter<String, List<FlowRuleEntity>> flowRuleEntityDecoder() {
+        return s -> JSON.parseArray(s, FlowRuleEntity.class);
+    }
+
+    @Bean
+    public ConfigService nacosConfigService() throws Exception { // 进行服务的配置
+        Properties properties = new Properties(); // 定义Nacos的配置属性
+        properties.put(PropertyKeyConst.SERVER_ADDR, this.address);
+        properties.put(PropertyKeyConst.NAMESPACE, this.namespace);
+        properties.put(PropertyKeyConst.CLUSTER_NAME, this.clusterName);
+        return ConfigFactory.createConfigService(properties);
+    }
+}
+
+4、
+Sentinel\sentinel-dashboard\src\main\webapp\resources\app\scripts\directives\sidebar\sidebar.html
+
+5、
+          <li ui-sref-active="active" ng-if="entry.appType==0">
+            <a ui-sref="dashboard.flow({app: entry.app})">
+              <i class="glyphicon glyphicon-filter"></i>&nbsp;&nbsp;流控规则 V1</a>
+          </li>
+
+6、
+mvn clean package -DskipTests
+
+7、
+Sentinel\sentinel-dashboard\target\sentinel-dashboard.jar
+
+8、
+java -Dserver.port=8888 -Dcsp.sentinel.dashboard.server=localhost:8888 -Dproject.name=sentinel-dashboard -Dsentinel.dashboard.auth.username=muyan -Dsentinel.dashboard.auth.password=yootk -jar sentinel-dashboard.jar
+
+9、
+

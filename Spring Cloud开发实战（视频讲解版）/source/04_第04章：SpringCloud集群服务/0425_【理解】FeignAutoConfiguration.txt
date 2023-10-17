@@ -1,0 +1,205 @@
+1、
+package org.springframework.cloud.openfeign;
+import feign.okhttp.OkHttpClient;  // 源代码之中此处飘红，缺少相关的依赖
+import okhttp3.ConnectionPool; // 源代码之中此处飘红，缺少相关的依赖
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnClass(Feign.class)
+@EnableConfigurationProperties({ FeignClientProperties.class, // Feign配置项
+      FeignHttpClientProperties.class }) // Feign.HTTP配置项（HttpClient依赖库的使用）
+@Import(DefaultGzipDecoderConfiguration.class) // 压缩解码的配置
+public class FeignAutoConfiguration {
+   @Autowired(required = false)
+   private List<FeignClientSpecification> configurations = new ArrayList<>();
+   @Bean
+   public HasFeatures feignFeature() {
+      return HasFeatures.namedFeature("Feign", Feign.class);
+   }
+   @Bean
+   public FeignContext feignContext() {
+      FeignContext context = new FeignContext();// Feign上下文
+      context.setConfigurations(this.configurations); // 接收当前的Feign配置项
+      return context;
+   }
+   @Configuration(proxyBeanMethods = false)
+// Hystrix是其内部实现的一个熔断保护的组件，但是在SpringCloudAlibaba套件里面不推荐使用
+   @ConditionalOnClass(name = "feign.hystrix.HystrixFeign") // Hystrix整合的配置
+   protected static class HystrixFeignTargeterConfiguration {
+      @Bean
+      @ConditionalOnMissingBean
+      public Targeter feignTargeter() {
+         return new HystrixTargeter();
+      }
+   }
+   @Configuration(proxyBeanMethods = false)
+   @ConditionalOnMissingClass("feign.hystrix.HystrixFeign")
+   protected static class DefaultFeignTargeterConfiguration {
+      @Bean
+      @ConditionalOnMissingBean
+      public Targeter feignTargeter() {
+         return new DefaultTargeter();
+      }
+   }
+   @Configuration(proxyBeanMethods = false)
+   @ConditionalOnClass(ApacheHttpClient.class)
+   @ConditionalOnMissingClass("com.netflix.loadbalancer.ILoadBalancer")
+   @ConditionalOnMissingBean(CloseableHttpClient.class)
+   @ConditionalOnProperty(value = "feign.httpclient.enabled", matchIfMissing = true)
+   protected static class HttpClientFeignConfiguration { // 默认情况下使用的是HttpClient组件
+      private final Timer connectionManagerTimer = new Timer(
+            "FeignApacheHttpClientConfiguration.connectionManagerTimer", true);
+      @Autowired(required = false)
+      private RegistryBuilder registryBuilder; // 注册构建器
+      private CloseableHttpClient httpClient; // 在JavaWEB基础课程里面讲解过了此组件
+      @Bean
+      @ConditionalOnMissingBean(HttpClientConnectionManager.class)
+      public HttpClientConnectionManager connectionManager(
+            ApacheHttpClientConnectionManagerFactory connectionManagerFactory,
+            FeignHttpClientProperties httpClientProperties) {
+         final HttpClientConnectionManager connectionManager = connectionManagerFactory
+               .newConnectionManager(httpClientProperties.isDisableSslValidation(),
+                     httpClientProperties.getMaxConnections(),
+                     httpClientProperties.getMaxConnectionsPerRoute(),
+                     httpClientProperties.getTimeToLive(),
+                     httpClientProperties.getTimeToLiveUnit(),
+                     this.registryBuilder); // HTTP连接池配置
+         this.connectionManagerTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+               connectionManager.closeExpiredConnections();// 定期销毁已经失效的连接
+            }
+         }, 30000, httpClientProperties.getConnectionTimerRepeat());
+         return connectionManager;
+      }
+      @Bean
+      public CloseableHttpClient httpClient(ApacheHttpClientFactory httpClientFactory,
+            HttpClientConnectionManager httpClientConnectionManager,
+            FeignHttpClientProperties httpClientProperties) { // 创建HttpClient的处理Bean对象
+         RequestConfig defaultRequestConfig = RequestConfig.custom()
+               .setConnectTimeout(httpClientProperties.getConnectionTimeout())
+               .setRedirectsEnabled(httpClientProperties.isFollowRedirects())
+               .build();
+         this.httpClient = httpClientFactory.createBuilder()
+               .setConnectionManager(httpClientConnectionManager)
+               .setDefaultRequestConfig(defaultRequestConfig).build();
+         return this.httpClient;
+      }
+      @Bean
+      @ConditionalOnMissingBean(Client.class)
+      public Client feignClient(HttpClient httpClient) { // 提供了一个Client对象实例
+         return new ApacheHttpClient(httpClient); // Feign组件与HttpClient组件整合在一起了
+      }
+      @PreDestroy
+      public void destroy() throws Exception {
+         this.connectionManagerTimer.cancel();
+         if (this.httpClient != null) {
+            this.httpClient.close();
+         }
+      }
+   }
+   @Configuration(proxyBeanMethods = false)
+   @ConditionalOnClass(OkHttpClient.class)
+   @ConditionalOnMissingClass("com.netflix.loadbalancer.ILoadBalancer")
+   @ConditionalOnMissingBean(okhttp3.OkHttpClient.class)
+   @ConditionalOnProperty("feign.okhttp.enabled") // 没有启用默认状态
+   protected static class OkHttpFeignConfiguration { // OKHttp组件的应用
+      private okhttp3.OkHttpClient okHttpClient;
+      @Bean
+      @ConditionalOnMissingBean(ConnectionPool.class)
+      public ConnectionPool httpClientConnectionPool(
+            FeignHttpClientProperties httpClientProperties,
+            OkHttpClientConnectionPoolFactory connectionPoolFactory) {
+         Integer maxTotalConnections = httpClientProperties.getMaxConnections();
+         Long timeToLive = httpClientProperties.getTimeToLive();
+         TimeUnit ttlUnit = httpClientProperties.getTimeToLiveUnit();
+         return connectionPoolFactory.create(maxTotalConnections, timeToLive, ttlUnit);
+      }
+
+      @Bean
+      public okhttp3.OkHttpClient client(OkHttpClientFactory httpClientFactory,
+            ConnectionPool connectionPool,
+            FeignHttpClientProperties httpClientProperties) {
+         Boolean followRedirects = httpClientProperties.isFollowRedirects();
+         Integer connectTimeout = httpClientProperties.getConnectionTimeout();
+         Boolean disableSslValidation = httpClientProperties.isDisableSslValidation();
+         this.okHttpClient = httpClientFactory.createBuilder(disableSslValidation)
+               .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
+               .followRedirects(followRedirects).connectionPool(connectionPool)
+               .build();
+         return this.okHttpClient;
+      }
+      @PreDestroy
+      public void destroy() {
+         if (this.okHttpClient != null) {
+            this.okHttpClient.dispatcher().executorService().shutdown();
+            this.okHttpClient.connectionPool().evictAll();
+         }
+      }
+      @Bean
+      @ConditionalOnMissingBean(Client.class)
+      public Client feignClient(okhttp3.OkHttpClient client) {
+         return new OkHttpClient(client);
+      }
+   }
+}
+
+
+2、
+@ConfigurationProperties("feign.client")
+public class FeignClientProperties {
+   public static class FeignClientConfiguration {
+      private Logger.Level loggerLevel;
+      private Integer connectTimeout;
+      private Integer readTimeout;
+      private Class<Retryer> retryer;
+      private Class<ErrorDecoder> errorDecoder;
+      private List<Class<RequestInterceptor>> requestInterceptors;
+      private Boolean decode404;
+      private Class<Decoder> decoder;
+      private Class<Encoder> encoder;
+      private Class<Contract> contract;
+      private ExceptionPropagationPolicy exceptionPropagationPolicy;
+}
+
+
+3、
+@ConfigurationProperties(prefix = "feign.httpclient")
+public class FeignHttpClientProperties {
+   public static final boolean DEFAULT_DISABLE_SSL_VALIDATION = false;
+   public static final int DEFAULT_MAX_CONNECTIONS = 200;
+   public static final int DEFAULT_MAX_CONNECTIONS_PER_ROUTE = 50;
+   public static final long DEFAULT_TIME_TO_LIVE = 900L;
+   public static final TimeUnit DEFAULT_TIME_TO_LIVE_UNIT = 
+      TimeUnit.SECONDS;
+   public static final boolean DEFAULT_FOLLOW_REDIRECTS = true;
+   public static final int DEFAULT_CONNECTION_TIMEOUT = 2000;
+   public static final int DEFAULT_CONNECTION_TIMER_REPEAT = 3000;
+   private boolean disableSslValidation = 
+      DEFAULT_DISABLE_SSL_VALIDATION;
+   private int maxConnections = DEFAULT_MAX_CONNECTIONS;
+   private int maxConnectionsPerRoute = 
+      DEFAULT_MAX_CONNECTIONS_PER_ROUTE;
+   private long timeToLive = DEFAULT_TIME_TO_LIVE;
+   private TimeUnit timeToLiveUnit = DEFAULT_TIME_TO_LIVE_UNIT;
+   private boolean followRedirects = DEFAULT_FOLLOW_REDIRECTS;
+   private int connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
+   private int connectionTimerRepeat = DEFAULT_CONNECTION_TIMER_REPEAT;
+}
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

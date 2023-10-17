@@ -1,0 +1,138 @@
+1、
+package com.yootk.provider.config;
+
+import com.alibaba.csp.sentinel.annotation.aspectj.SentinelResourceAspect;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
+
+@Configuration
+@EnableAspectJAutoProxy(exposeProxy = true, proxyTargetClass = true) // CGLIB代理
+public class SentinelAOPConfig { // Sentinel配置
+    // 所有的Fallback的处理操作全部都是基于切面的形式负责完成的
+    @Bean
+    public SentinelResourceAspect getSentinelResourceAspect() {
+        return new SentinelResourceAspect();
+    }
+}
+
+
+2、
+
+package com.alibaba.csp.sentinel.annotation.aspectj;
+import com.alibaba.csp.sentinel.Entry;
+import com.alibaba.csp.sentinel.EntryType;
+import com.alibaba.csp.sentinel.SphU;
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
+import java.lang.reflect.Method;
+@Aspect // 现在定义的是一个AOP切面
+public class SentinelResourceAspect extends AbstractSentinelAspectSupport {
+// 定义AOP的切入点，使用了一个SpEL表达式，只要存在一个SentinelResource注解的操作
+    @Pointcut("@annotation(com.alibaba.csp.sentinel.annotation.SentinelResource)")
+    public void sentinelResourceAnnotationPointcut() {}
+// 所有被Sentinel操作的组件的代码都是在代理结构之中进行的控制。
+    @Around("sentinelResourceAnnotationPointcut()")// 采用了环绕通知
+    public Object invokeResourceWithSentinel(ProceedingJoinPoint pjp) throws Throwable {
+        Method originMethod = resolveMethod(pjp); // 方法的解析
+        // 通过指定的方法（当前正在调用的微服务中的处理方法）获取Annotation
+        SentinelResource annotation = originMethod.getAnnotation(SentinelResource.class);
+        if (annotation == null) { // 没有发现对应的Annotation
+            throw new IllegalStateException("Wrong state for SentinelResource annotation");
+        }
+// 获取资源的名称，如果没有在注解之中配置名称就使用方法定义，而如果有则使用自定义名称
+        String resourceName = getResourceName(annotation.value(), originMethod);
+        EntryType entryType = annotation.entryType();// 实体类型
+        int resourceType = annotation.resourceType();// 资源类型
+        Entry entry = null; // 实体，只是进行了一个简单的定义
+        try { // 以下的处理操作才是Sentinel内部最为核心的实现原理
+            entry = SphU.entry(resourceName, resourceType, entryType, pjp.getArgs());
+            Object result = pjp.proceed();// 调用真实操作方法
+            return result;
+        } catch (BlockException ex) {  // 阻断异常，违反了限流规则
+            return handleBlockException(pjp, annotation, ex);
+        } catch (Throwable ex) { // 异常处理操作
+            Class<? extends Throwable>[] exceptionsToIgnore = annotation.exceptionsToIgnore();
+            // The ignore list will be checked first.
+            if (exceptionsToIgnore.length > 0 && exceptionBelongsTo(ex, exceptionsToIgnore)) {
+                throw ex;
+            }
+            if (exceptionBelongsTo(ex, annotation.exceptionsToTrace())) {
+                traceException(ex);
+                return handleFallback(pjp, annotation, ex);
+            }
+            // No fallback function can handle the exception, so throw it out.
+            throw ex;
+        } finally {
+            if (entry != null) {
+                entry.exit(1, pjp.getArgs());// 结束实体调用
+             }
+        }
+    }
+}
+
+3、
+package com.yootk.test;
+
+import com.alibaba.csp.sentinel.Entry;
+import com.alibaba.csp.sentinel.SphU;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
+import com.alibaba.csp.sentinel.slots.block.RuleConstant;
+import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;
+import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+public class TestEntry {
+    public static void main(String[] args) { // 主方法直接测试
+        initFlowRules(); // 初始化规则
+        while (true) {  // 循环调用
+            Entry entry = null;
+            try {
+                entry = SphU.entry("YootkMessage"); // 创建规则实体
+                System.out.println("【业务处理】www.yootk.com");
+            } catch (BlockException e) {
+                e.printStackTrace();
+            } finally {
+                if (entry != null) {
+                    entry.exit();
+                }
+            }
+        }
+    }
+    public static void initFlowRules() {    // 配置基础的流控原则
+        // 在一个资源上可以同时配置若干个不同的限流访问规则，那么这一点在程序里面就是List集合
+        List<FlowRule> rules = new ArrayList<>();
+        FlowRule rule = new FlowRule(); // 定义一个具体的限流规则
+        rule.setResource("YootkMessage"); // 定义资源名称
+        rule.setGrade(RuleConstant.FLOW_GRADE_QPS); // 根据QPS进行限流
+        rule.setCount(10); // 每秒允许有10个请求访问
+        rules.add(rule); // 保存当前的规则
+        FlowRuleManager.loadRules(rules); // 加载规则
+    }
+}
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

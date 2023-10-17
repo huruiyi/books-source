@@ -1,0 +1,27 @@
+1、
+https://zookeeper.apache.org/
+
+2、
+git clone git@gitee.com:mirrors/Nacos.git
+
+3、
+curl -X PUT "nacos-proxy:8848/nacos/v1/ns/operator/switches?entry=serverMode&value=CP&username=nacos&password=nacos"
+
+4、
+curl -X PUT "nacos-proxy:8848/nacos/v1/ns/operator/switches?entry=serverMode&value=AP&username=nacos&password=nacos"
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

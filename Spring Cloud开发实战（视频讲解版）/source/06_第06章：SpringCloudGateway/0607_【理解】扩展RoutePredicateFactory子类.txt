@@ -1,0 +1,103 @@
+1、
+package com.yootk.gateway.predicate.config;
+
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public class TimeSubsectionConfig {
+    private Set<String> section = new LinkedHashSet<>(); // 按照顺序保存不重复的数据
+    public void setSection(List<String> section) {
+        this.section.addAll(section);
+    }
+    public Set<String> getSection() {
+        return section;
+    }
+}
+
+
+2、
+package com.yootk.gateway.predicate.factory;
+
+import com.yootk.gateway.predicate.config.TimeSubsectionConfig;
+import org.springframework.cloud.gateway.handler.predicate.AbstractRoutePredicateFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Predicate;
+
+@Component
+public class DefaultTimeSubsectionRoutePredicateFactory
+        extends AbstractRoutePredicateFactory<TimeSubsectionConfig> {
+    // 既然需要根据当前的时间进行判断，所以这个时候就需要有一个时间的转换处理类
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    public DefaultTimeSubsectionRoutePredicateFactory() {
+        super(TimeSubsectionConfig.class); // 传递配置项
+    }
+    @Override
+    public Predicate<ServerWebExchange> apply(TimeSubsectionConfig config) {
+        return serverWebExchange -> {
+            String now = LocalTime.now().format(FORMATTER); // 获取当前的时和分
+            return config.getSection().contains(now); // 存在判断
+        };
+    }
+    @Override
+    public List<String> shortcutFieldOrder() { // 配置项
+        // 按照“,”定义多个不同的配置项，而后此时会自动进行数据的拆分
+        return Collections.singletonList("section"); // 配置项的名称定义
+    }
+
+    @Override
+    public ShortcutType shortcutType() { // 明确的定义分割项
+        return ShortcutType.GATHER_LIST;
+    }
+}
+
+
+3、
+server:
+  port: 9501 # 网关服务的端口
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: false # 取消默认路由配置，默认值就是false
+      routes: # 定义静态路由
+        - id: dept # 路由标记
+          uri: lb://dept.provider # 负载均衡调用
+          predicates: # 路由谓词工厂
+            - Path=/** # 匹配全部的路径
+            - DefaultTimeSubsection=08:00,16:00,20:00,24:00
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

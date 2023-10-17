@@ -1,0 +1,95 @@
+1、
+
+package org.springframework.cloud.netflix.hystrix;
+@Configuration(proxyBeanMethods = false)
+public class HystrixCircuitBreakerConfiguration {
+   @Bean
+   public HystrixCommandAspect hystrixCommandAspect() {  // 此时提供了Hystrix执行切面定义
+      return new HystrixCommandAspect();
+   }
+   @Bean
+   public HystrixShutdownHook hystrixShutdownHook() { // Hystrix关闭钩子处理
+      return new HystrixShutdownHook();
+   }
+   @Bean
+   public HasFeatures hystrixFeature() {
+      return HasFeatures
+            .namedFeatures(new NamedFeature("Hystrix", HystrixCommandAspect.class));
+   }
+   private class HystrixShutdownHook implements DisposableBean { // 关闭处理
+      @Override
+      public void destroy() throws Exception {
+         Hystrix.reset();// 进行了Hystrix线程池的释放
+      }
+   }
+}
+
+2、
+package org.springframework.cloud.netflix.hystrix;
+@Configuration(proxyBeanMethods = false)
+public class HystrixCircuitBreakerConfiguration {
+   @Bean
+   public HystrixCommandAspect hystrixCommandAspect() {  // 此时提供了Hystrix执行切面定义
+      return new HystrixCommandAspect();
+   }
+   @Bean
+   public HystrixShutdownHook hystrixShutdownHook() { // Hystrix关闭钩子处理
+      return new HystrixShutdownHook();
+   }
+   @Bean
+   public HasFeatures hystrixFeature() {
+      return HasFeatures
+            .namedFeatures(new NamedFeature("Hystrix", HystrixCommandAspect.class));
+   }
+   private class HystrixShutdownHook implements DisposableBean { // 关闭处理
+      @Override
+      public void destroy() throws Exception {
+         Hystrix.reset();// 进行了Hystrix线程池的释放
+      }
+   }
+}
+package com.netflix.hystrix;
+public interface HystrixThreadPool {
+    public ExecutorService getExecutor();// 线程池处理
+    public Scheduler getScheduler();// 调度任务
+    public Scheduler getScheduler(Func0<Boolean> shouldInterruptThread);
+    public void markThreadExecution();// 线程池开始执行前的标记
+    public void markThreadCompletion();// 线程执行完毕的标记
+    public void markThreadRejection();// 拒绝标记
+    public boolean isQueueSpaceAvailable();// 是否有可用队列空间
+}
+
+
+3、
+public abstract class HystrixThreadPoolProperties {
+    /* defaults */
+    static int default_coreSize = 10;            // core size of thread pool
+    static int default_maximumSize = 10;         // maximum size of thread pool
+    static int default_keepAliveTimeMinutes = 1; // minutes to keep a thread alive
+    static int default_maxQueueSize = -1;        // size of queue (this can't be dynamically changed so we use 'queueSizeRejectionThreshold' to artificially limit and reject)
+                                                 // -1 turns it off and makes us use SynchronousQueue
+    static boolean default_allow_maximum_size_to_diverge_from_core_size = false; //should the maximumSize config value get read and used in configuring the threadPool
+                                                                                 //turning this on should be a conscious decision by the user, so we default it to false
+    static int default_queueSizeRejectionThreshold = 5; // number of items in queue
+    static int default_threadPoolRollingNumberStatisticalWindow = 10000; // milliseconds for rolling number
+    static int default_threadPoolRollingNumberStatisticalWindowBuckets = 10; // number of buckets in rolling number (10 1-second buckets)
+}
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

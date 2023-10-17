@@ -1,0 +1,68 @@
+1、
+mkdir -p /usr/data/rocketmq/store/commitlog
+
+2、
+unzip /var/ftp/rocketmq-all-4.9.1-bin-release.zip -d /usr/local/
+
+3、
+mv /usr/local/rocketmq-all-4.9.1-bin-release/ /usr/local/rocketmq
+
+4、
+mkdir -p /usr/local/rocketmq/logs
+
+5、
+vi /usr/local/rocketmq/bin/runbroker.sh
+
+6、
+JAVA_OPT="${JAVA_OPT} -server -Xms1g -Xmx1g"
+
+7、
+cp /usr/local/rocketmq/conf/dledger/broker-n0.conf /usr/local/rocketmq/conf/dledger/broker-cluster.conf
+
+8、vi /usr/local/rocketmq/conf/dledger/broker-cluster.conf
+
+brokerClusterName = YootkRocketMQCluster
+brokerName=Yootk-A
+listenPort=30911
+namesrvAddr=nameserver-cluster-a:9876;nameserver-cluster-b:9876
+storePathRootDir=/usr/data/rocketmq/store
+storePathCommitLog=/usr/data/rocketmq/store/commitlog
+enableDLegerCommitLog=true
+dLegerGroup=Yootk-A
+dLegerPeers=n10-192.168.190.180:40911;n11-192.168.190.181:40911;n12-192.168.190.182:40911
+dLegerSelfId=n10
+sendMessageThreadPoolNums=16
+
+9、
+scp -r /usr/local/rocketmq/ broker-cluster-a-node-2:/usr/local
+scp -r /usr/local/rocketmq/ broker-cluster-a-node-3:/usr/local
+scp -r /usr/local/rocketmq/ broker-cluster-b-node-1:/usr/local
+scp -r /usr/local/rocketmq/ broker-cluster-b-node-2:/usr/local
+scp -r /usr/local/rocketmq/ broker-cluster-b-node-3:/usr/local
+scp -r /usr/local/rocketmq/ broker-cluster-c-node-1:/usr/local
+scp -r /usr/local/rocketmq/ broker-cluster-c-node-2:/usr/local
+scp -r /usr/local/rocketmq/ broker-cluster-c-node-3:/usr/local
+
+10、
+vi /usr/local/rocketmq/conf/dledger/broker-cluster.conf
+
+11、
+brokerName=Yootk-B
+dLegerGroup=Yootk-B
+dLegerPeers=n20-192.168.190.183:40911;n21-192.168.190.184:40912;n22-192.168.190.185:40913
+LegerSelfId=n20
+
+12、
+nohup /usr/local/rocketmq/bin/mqbroker -c /usr/local/rocketmq/conf/dledger/broker-cluster.conf > /usr/local/rocketmq/logs/rocketmq-broker.log 2>&1 &
+
+13、
+firewall-cmd --zone=public --add-port=30909/tcp --permanent
+firewall-cmd --zone=public --add-port=30911/tcp --permanent
+firewall-cmd --zone=public --add-port=40911/tcp --permanent
+firewall-cmd --zone=public --add-port=40912/tcp --permanent
+firewall-cmd --zone=public --add-port=40913/tcp --permanent
+firewall-cmd --reload
+
+14、
+rocketmq.config.namesrvAddr=nameserver-cluster-a:9876;nameserver-cluster-b:9876
+

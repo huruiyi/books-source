@@ -1,0 +1,42 @@
+1、
+https://github.com/apache/rocketmq-externals
+
+2、
+git clone git@github.com:apache/rocketmq-externals.git
+
+git clone git@github.com:muyan-yootk/rocketmq-externals.git
+
+3、
+#if this value is empty,use env value rocketmq.config.namesrvAddr  NAMESRV_ADDR | now, you can set it in ops page.default localhost:9876
+rocketmq.config.namesrvAddr=rocketmq-server:9876
+rocketmq.config.accessKey=RocketMQMuyan
+rocketmq.config.secretKey=helloyootk
+
+
+4、
+#Must create userInfo file: ${rocketmq.config.dataPath}/users.properties if the login is required
+rocketmq.config.loginRequired=true
+
+
+5、
+# Define Admin，1：管理员、0：普通用户
+admin=admin,1
+
+# Define Users
+muyan=yootk
+
+6、
+
+java -jar /usr/local/rocketmq/rocketmq-console-ng-1.0.1.jar > /usr/local/rocketmq/logs/rocketmq-console.log 2>&1 &
+
+7、
+firewall-cmd --zone=public --add-port=8080/tcp --permanent
+firewall-cmd --reload
+
+8、
+rocketmq-server:8080
+
+9、
+/usr/local/rocketmq/bin/tools.sh org.apache.rocketmq.example.quickstart.Consumer
+/usr/local/rocketmq/bin/tools.sh org.apache.rocketmq.example.quickstart.Producer
+

@@ -1,0 +1,56 @@
+1、
+package muyan.yootk.config.ribbon;
+
+import com.netflix.loadbalancer.IRule;
+import com.netflix.loadbalancer.RandomRule;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration // 这个类必须使用该注解定义
+public class DeptProviderRibbonConfig {
+    @Bean // Bean注册
+    public IRule ribbonRule() { // 自定义负载均衡规则
+        return new RandomRule(); // 随机读取
+    }
+}
+
+
+2、
+package com.yootk.consumer;
+
+import muyan.yootk.config.ribbon.DeptProviderRibbonConfig;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.ribbon.RibbonClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+// 如果此时要有多个配置项，可以使用@RibbonClients注解，该注解可以配置多个@RibbonClient
+@RibbonClient(name = "dept.provider", configuration = DeptProviderRibbonConfig.class) // 自定义Ribbon配置
+public class StartConsumerApplication { // 沐言科技：www.yootk.com
+    public static void main(String[] args) {
+        SpringApplication.run(StartConsumerApplication.class, args);
+    }
+}
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

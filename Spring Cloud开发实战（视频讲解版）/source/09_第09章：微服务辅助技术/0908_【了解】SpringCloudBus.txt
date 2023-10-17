@@ -1,0 +1,134 @@
+1、
+https://docs.spring.io/spring-cloud-config/docs/3.0.4/reference/html/#_push_notifications_and_spring_cloud_bus
+
+2、
+// https://mvnrepository.com/artifact/com.alibaba.cloud/spring-cloud-starter-bus-rocketmq
+implementation group: 'com.alibaba.cloud', name: 'spring-cloud-starter-bus-rocketmq', version: '2021.1'
+
+
+3、
+project(":config-server-7501") {    // 部门微服务
+    dependencies {
+        implementation("org.springframework.boot:spring-boot-starter-web")
+        implementation("org.springframework.cloud:spring-cloud-config-server")
+        implementation('com.alibaba.cloud:spring-cloud-starter-bus-rocketmq')
+        implementation(libraries.'spring-boot-admin-starter-client')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+project(":provider-message-8201") {    // 消息微服务
+    dependencies {
+        implementation("org.springframework.boot:spring-boot-starter-web")
+        implementation("org.springframework.cloud:spring-cloud-starter-config")
+        implementation('com.alibaba.cloud:spring-cloud-starter-bus-rocketmq')
+        implementation(libraries.'spring-boot-admin-starter-client')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+4、
+spring:
+  application: # 配置应用信息
+    name: config.server # 是微服务的名称
+  cloud: # Cloud配置
+    stream:
+      rocketmq:
+        binder:
+          name-server: rocketmq-server:9876
+          access-key: RocketMQMuyan
+          secret-key: helloyootk
+
+5、
+spring:
+  application: # 配置应用信息
+    name: message.provider # 是微服务的名称
+  cloud: # Cloud配置
+    stream:
+      rocketmq:
+        binder:
+          name-server: rocketmq-server:9876
+          access-key: RocketMQMuyan
+          secret-key: helloyootk
+
+6、
+package com.yootk.provider.vo;
+
+import lombok.Data;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.stereotype.Component;
+
+@Data
+@Component // 必须添加为Bean
+@RefreshScope // 动态加载
+public class MessageConfig {
+    @Value("${yootk.message.flag}") // 配置文件的加载KEY
+    private String flag;
+    @Value("${yootk.message.content}") // 配置文件的加载KEY
+    private String content;
+}
+
+
+7、
+package com.yootk.provider.action;
+
+import com.yootk.provider.vo.MessageConfig;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/provider/message/*")
+public class MessageAction {
+    @Autowired
+    private MessageConfig messageConfig;
+    @RequestMapping("config")
+    public Object config() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("flag", this.messageConfig.getFlag());
+        result.put("content", this.messageConfig.getContent());
+        return result;
+    }
+}
+
+
+8、
+management:
+  endpoints:
+    web:
+      exposure:
+        include: 'bus-refresh'
+
+9、
+yootk:
+  message:
+    flag: prod
+    content: 小李老师公益课程资源下载（隶属于沐言科技）：www.yootk.com/resources
+
+10、
+git add .
+git commit -m "Modify message.provider-prod.yml File"
+
+11、
+git push -u origin master
+
+12、
+config-server-7501:7501/actuator/bus-refresh
+

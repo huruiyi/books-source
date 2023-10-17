@@ -1,0 +1,26 @@
+1、
+/usr/local/rocketmq/bin/mqadmin
+
+2、
+/usr/local/rocketmq/bin/mqadmin updateTopic -b rocketmq-server:10911 -t TopicYootk
+
+3、
+/usr/local/rocketmq/bin/mqadmin topicList
+
+4、
+/usr/local/rocketmq/bin/mqadmin deleteTopic -c DefaultCluster -n rocketmq-server:9876 -t YootkTopic
+
+5、
+/usr/local/rocketmq/bin/mqadmin updateSubGroup -c DefaultCluster -n rocketmq-server:9876 -g muyan-group
+
+6、
+/usr/local/rocketmq/bin/mqadmin deleteSubGroup -c DefaultCluster -n rocketmq-server:9876 -g muyan-group
+
+7、
+/usr/local/rocketmq/bin/mqadmin updateBrokerConfig -c DefaultCluster -n rocketmq-server:9876 -k flushDiskType -v SYNC_FLUSH
+
+8、
+/usr/local/rocketmq/bin/mqadmin topicRoute -n rocketmq-server:9876 -t TopicTest
+
+9、
+

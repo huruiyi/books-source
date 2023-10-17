@@ -1,0 +1,70 @@
+1、
+cd /var/ftp/
+wget https://dlcdn.apache.org/rocketmq/4.9.1/rocketmq-all-4.9.1-bin-release.zip
+
+2、
+unzip /var/ftp/rocketmq-all-4.9.1-bin-release.zip -d /usr/local/
+
+3、
+mv /usr/local/rocketmq-all-4.9.1-bin-release/ /usr/local/rocketmq
+
+
+4、
+mkdir /usr/local/rocketmq/logs
+
+5、
+mv jdk jdk-11
+tar xzvf /var/ftp/jdk-8u191-linux-x64.tar.gz -C /usr/local/
+mv /usr/local/jdk1.8.0_191/ /usr/local/jdk
+javac -version
+
+6、
+/usr/local/rocketmq/bin/mqnamesrv
+
+7、
+vi /usr/local/rocketmq/bin/runserver.sh
+
+8、
+JAVA_OPT="${JAVA_OPT} -server -Xms1g -Xmx1g -Xmn512m -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=256m"
+
+9、
+nohup /usr/local/rocketmq/bin/mqnamesrv > /usr/local/rocketmq/logs/rocketmq-namesrv.log 2>&1 &
+
+10、
+mkdir -p /usr/local/rocketmq/store/commitlog
+
+11、
+vi /usr/local/rocketmq/conf/broker.conf
+
+namesrvAddr=rocketmq-server:9876
+storePathRootDir=/usr/local/rocketmq/store
+storePathCommitLog=/usr/local/rocketmq/store/commitlog
+
+
+12、vi /usr/local/rocketmq/bin/runbroker.sh 
+JAVA_OPT="${JAVA_OPT} -server -Xms1g -Xmx1g"
+
+13、
+nohup /usr/local/rocketmq/bin/mqbroker -c /usr/local/rocketmq/conf/broker.conf > /usr/local/rocketmq/logs/rocketmq-broker.log 2>&1 &
+
+14、
+vi /etc/profile
+export NAMESRV_ADDR=rocketmq-server:9876
+
+15、
+firewall-cmd --zone=public --add-port=9876/tcp --permanent
+firewall-cmd --zone=public --add-port=10911/tcp --permanent
+firewall-cmd --zone=public --add-port=10912/tcp --permanent
+firewall-cmd --zone=public --add-port=10909/tcp --permanent
+firewall-cmd --reload
+
+
+16、
+org.apache.rocketmq.example.quickstart.Producer
+org.apache.rocketmq.example.quickstart.Consumer
+
+/usr/local/rocketmq/bin/tools.sh org.apache.rocketmq.example.quickstart.Producer
+/usr/local/rocketmq/bin/tools.sh org.apache.rocketmq.example.quickstart.Consumer
+
+17、
+

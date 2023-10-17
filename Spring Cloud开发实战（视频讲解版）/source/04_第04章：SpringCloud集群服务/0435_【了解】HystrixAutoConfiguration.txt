@@ -1,0 +1,90 @@
+1、
+package org.springframework.cloud.netflix.hystrix;
+import org.springframework.web.reactive.DispatcherHandler; // 响应式编程处理类
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnClass({ Hystrix.class, HealthIndicator.class,
+      HealthContributorAutoConfiguration.class }) // 微服务健康配置
+@AutoConfigureAfter({ HealthContributorAutoConfiguration.class })
+public class HystrixAutoConfiguration {
+   @Bean
+   @ConditionalOnEnabledHealthIndicator("hystrix")
+   public HystrixHealthIndicator hystrixHealthIndicator() { // 微服务的统计数据
+      return new HystrixHealthIndicator();
+   }
+   @Configuration(proxyBeanMethods = false)
+   @ConditionalOnProperty(value = "management.metrics.binders.hystrix.enabled",
+         matchIfMissing = true)
+   @ConditionalOnClass({ HystrixMetricsBinder.class })
+   protected static class HystrixMetricsConfiguration { // 微服务度量配置
+      @Bean
+      public HystrixMetricsBinder hystrixMetricsBinder() { // 接收整个的调用的统计信息
+         return new HystrixMetricsBinder();
+      }
+   }
+   @Configuration(proxyBeanMethods = false)
+   @ConditionalOnWebApplication(type = SERVLET)
+   @ConditionalOnBean(HystrixCommandAspect.class) // only install the stream if enabled
+   @ConditionalOnClass({ HystrixMetricsStreamServlet.class })
+   @EnableConfigurationProperties(HystrixProperties.class)
+   protected static class HystrixServletAutoConfiguration {
+      @Bean
+      @ConditionalOnAvailableEndpoint
+      public HystrixStreamEndpoint hystrixStreamEndpoint(HystrixProperties properties) {
+// 在微服务里面可以通过“hystrix.stream”进行服务数据的监控（要提供有Actuator端点）
+         return new HystrixStreamEndpoint(properties.getConfig()); // 监控端点
+      }
+      @Bean
+      public HasFeatures hystrixStreamFeature() {
+         return HasFeatures.namedFeature("Hystrix Stream Servlet",
+               HystrixMetricsStreamServlet.class);
+      }
+   }
+   @Configuration(proxyBeanMethods = false)
+   @ConditionalOnWebApplication(type = REACTIVE)
+   @ConditionalOnBean(HystrixCommandAspect.class) // only install the stream if enabled
+   @ConditionalOnClass({ DispatcherHandler.class }) // 基于响应式的编程模型
+   @EnableConfigurationProperties(HystrixProperties.class)
+   protected static class HystrixWebfluxManagementContextConfiguration {
+      @Bean
+      @ConditionalOnAvailableEndpoint
+      public HystrixWebfluxEndpoint hystrixWebfluxController() {
+         Observable<String> serializedDashboardData = HystrixDashboardStream
+               .getInstance().observe()
+               .concatMap(dashboardData -> Observable.from(SerialHystrixDashboardData
+                     .toMultipleJsonStrings(dashboardData)));
+         Publisher<String> publisher = RxReactiveStreams
+               .toPublisher(serializedDashboardData);
+         return new HystrixWebfluxEndpoint(publisher); // 响应式的断点
+      }
+      @Bean
+      public HasFeatures hystrixStreamFeature() {
+         return HasFeatures.namedFeature("Hystrix Stream Webflux",
+               HystrixWebfluxEndpoint.class);
+      }
+   }
+}
+
+
+2、
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

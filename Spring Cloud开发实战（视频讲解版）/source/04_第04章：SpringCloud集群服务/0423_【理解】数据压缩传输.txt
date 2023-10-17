@@ -1,0 +1,60 @@
+1、
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] ---> GET http://dept.provider/provider/dept/get/1 HTTP/1.1
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] ---> END HTTP (0-byte body)
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] <--- HTTP/1.1 200  (90ms)
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] cache-control: no-cache, no-store, max-age=0, must-revalidate
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] connection: keep-alive
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] content-type: application/json
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] date: Sun, 15 Aug 2021 08:01:06 GMT
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] expires: 0
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] keep-alive: timeout=60
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] pragma: no-cache
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] transfer-encoding: chunked
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] x-content-type-options: nosniff
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] x-frame-options: DENY
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] x-xss-protection: 1; mode=block
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] 
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] {"deptno":1,"dname":"开发部","loc":"yootk8001"}
+DEBUG 18404 --- [p-nio-80-exec-1] com.yootk.service.IDeptService           : [IDeptService#get] <--- END HTTP (50-byte body)
+
+
+
+2、
+
+
+3、
+server: # 服务端配置
+  port: 80 # 这个接口可以随意，反正最终都是由前端提供服务
+  compression: # 启用压缩配置
+    enabled: true # 配置启用
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain # 压缩类型
+
+4、
+feign:
+  httpclient:
+    enabled: true # 启用httpclient连接池
+    max-connections: 200 # httpclient处理的最大连接数量
+    max-connections-per-route: 50 # 单个路径连接的最大数量
+    connection-timeout: 2000 # 超时等待
+  compression: # 压缩处理
+    request: # 请求压缩配置
+      enabled: true # 启用请求压缩
+      mime-types: application/json,application/xml,text/html,text/xml,text/plain # 压缩类型
+      min-request-size: 512 # 达到此阈值的时候启用压缩
+    response: # 响应处理
+      enabled: true # 响应压缩
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

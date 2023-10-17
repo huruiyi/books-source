@@ -1,0 +1,166 @@
+1、
+project(":hystrix-dashboard-8101") {
+    dependencies { // 依赖的配置
+        implementation("org.springframework.boot:spring-boot-starter-web")
+        implementation('org.springframework.boot:spring-boot-starter-actuator')
+        implementation('org.springframework.cloud:spring-cloud-starter-netflix-hystrix')
+        implementation('org.springframework.cloud:spring-cloud-starter-netflix-hystrix-dashboard')
+    }
+}
+
+2、
+server:
+  port: 8101 # 监听端口
+
+3、
+package com.yookt.hystrix;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.hystrix.dashboard.EnableHystrixDashboard;
+
+@SpringBootApplication
+@EnableHystrixDashboard // 启动面板
+public class StartHystrixDashboardApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(StartHystrixDashboardApplication.class, args);
+    }
+}
+
+
+4、
+127.0.0.1	hystrix-dashboard-8101
+
+5、
+http://hystrix-dashboard-8101:8101/hystrix
+
+6、
+project(":provider-dept-hystrix") {    // 部门微服务
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation(libraries.'mybatis-plus-boot-starter')
+        implementation(libraries.'mysql-connector-java')
+        implementation(libraries.'druid')
+        implementation(libraries.'springfox-boot-starter')
+        implementation('org.springframework.boot:spring-boot-starter-security')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+        implementation('org.springframework.boot:spring-boot-starter-actuator')
+        implementation('org.springframework.cloud:spring-cloud-starter-netflix-hystrix')
+    }
+}
+
+7、
+package com.yootk.provider.action;
+
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.provider.vo.Dept;
+import com.yootk.service.IDeptService;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.Enumeration;
+
+@RestController
+@RequestMapping("/provider/dept/*") // 微服务提供者父路径
+@Slf4j // 使用一个注解
+public class DeptAction {
+    @Autowired
+    private IDeptService deptService;
+
+    @ApiOperation(value = "部门查询", notes = "根据部门编号查询部门详细信息")
+    @GetMapping("get/{id}")
+    @HystrixCommand
+    public Object get(@PathVariable("id") long id) {
+        this.printRequestHeaders("get");
+        return this.deptService.get(id);
+    }
+
+    @ApiOperation(value = "部门增加", notes = "增加新的部门信息")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "deptDTO", required = true,
+                    dataType = "DeptDTO", value = "部门传输对象实例")
+    })
+    @PostMapping("add")
+    @HystrixCommand
+    public Object add(@RequestBody DeptDTO deptDTO) {    // 后面会修改参数模式为JSON
+        this.printRequestHeaders("add");
+        return this.deptService.add(deptDTO);
+    }
+
+    @ApiOperation(value = "部门列表", notes = "查询部门的完整信息")
+    @GetMapping("list")
+    @HystrixCommand
+    public Object list() {
+        this.printRequestHeaders("list");
+        return this.deptService.list();
+    }
+
+    @ApiOperation(value = "部门分页查询", notes = "根据指定的数据库参数实现部门数据的分页加载")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "cp", value = "当前所在页", required = true, dataType = "int"),
+            @ApiImplicitParam(name = "ls", value = "每页显示的数据行数", required = true, dataType = "int"),
+            @ApiImplicitParam(name = "col", value = "模糊查询列", required = true, dataType = "String"),
+            @ApiImplicitParam(name = "kw", value = "模糊查询关键字", required = true, dataType = "String")
+    })
+    @GetMapping("split")
+    @HystrixCommand
+    public Object split(int cp, int ls, String col, String kw) {
+        this.printRequestHeaders("split");
+        return this.deptService.split(cp, ls, col, kw);
+    }
+
+    private void printRequestHeaders(String restName) {    // 实现所有请求头信息的输出
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+        Enumeration<String> headerEnums = request.getHeaderNames();
+        while (headerEnums.hasMoreElements()) {
+            String headerName = headerEnums.nextElement();
+            log.info("【{}】头信息：{} = {}", restName, headerName, request.getHeader(headerName));
+        }
+    }
+}
+
+
+8、
+management:
+  endpoints:
+    web:
+      exposure:
+        include: *
+
+9、
+package com.yootk.provider;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.circuitbreaker.EnableCircuitBreaker;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.hystrix.EnableHystrix;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+@EnableHystrix // 启用Hystrix监控
+//@EnableCircuitBreaker // 启用熔断机制
+public class StartProviderDeptHystrixApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(StartProviderDeptHystrixApplication.class, args);
+    }
+}
+
+10、
+provider-dept-8001:8001/actuator/hystrix.stream
+

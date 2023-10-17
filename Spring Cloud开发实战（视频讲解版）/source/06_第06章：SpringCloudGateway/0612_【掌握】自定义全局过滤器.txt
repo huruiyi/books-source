@@ -1,0 +1,63 @@
+1、
+package com.yootk.gateway.filter.global;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import reactor.core.publisher.Mono;
+
+@Configuration // 向容器之中进行注册
+@Slf4j // 启用日志注解
+public class CombinedGlobalFilter { // 自定义过滤器
+    @Bean // 进行Bean注册
+    @Order(-20) // 数值越小，执行越靠前
+    public GlobalFilter getFirstFilter() {  // 创建一个过滤器
+        return (exchange, chain) -> {
+            log.info("【FirstFilter - PRE阶段】请求ID：{}、请求路径：{}",
+                    exchange.getRequest().getId(), exchange.getRequest().getPath());
+            return chain.filter(exchange).then(Mono.fromRunnable(()->{
+                log.info("【FirstFilter - POST阶段】请求ID：{}、请求路径：{}",
+                        exchange.getRequest().getId(), exchange.getRequest().getPath());
+            }));
+        };// 创建过滤器的实例
+    }
+    @Bean // 进行Bean注册
+    @Order(-10) // 数值越小，执行越靠前
+    public GlobalFilter getSecondFilter() {  // 创建二个过滤器
+        return (exchange, chain) -> {
+            log.info("【SecondFilter - PRE阶段】请求ID：{}、请求路径：{}",
+                    exchange.getRequest().getId(), exchange.getRequest().getPath());
+            return chain.filter(exchange).then(Mono.fromRunnable(()->{
+                log.info("【SecondFilter - POST阶段】请求ID：{}、请求路径：{}",
+                        exchange.getRequest().getId(), exchange.getRequest().getPath());
+            }));
+        };// 创建过滤器的实例
+    }
+}
+
+
+2、
+gateway-9501:9090/actuator/gateway/globalfilters
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

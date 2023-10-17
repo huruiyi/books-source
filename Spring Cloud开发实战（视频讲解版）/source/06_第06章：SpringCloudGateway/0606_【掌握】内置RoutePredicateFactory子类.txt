@@ -1,0 +1,158 @@
+1、
+package com.yootk.test;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
+public class CreateGatewayDatetime { // 创建一个日期时间数据
+    public static void main(String[] args) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        ZoneId zoneId = ZoneId.systemDefault(); // 获取默认的区域ID
+        LocalDateTime localDateTime = LocalDateTime.parse("2050-02-17 21:15:32", formatter);
+        ZonedDateTime now = ZonedDateTime.of(localDateTime, zoneId);
+        System.out.println(now);
+    }
+}
+
+
+2、
+server:
+  port: 9501 # 网关服务的端口
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: false # 取消默认路由配置，默认值就是false
+      routes: # 定义静态路由
+        - id: dept # 路由标记
+          uri: lb://dept.provider # 负载均衡调用
+          predicates: # 路由谓词工厂
+            - Path=/** # 匹配全部的路径
+            - After=2050-02-17T21:15:32+08:00[Asia/Shanghai] # 指定日期时间之后访问
+
+3、
+server:
+  port: 9501 # 网关服务的端口
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: false # 取消默认路由配置，默认值就是false
+      routes: # 定义静态路由
+        - id: dept # 路由标记
+          uri: lb://dept.provider # 负载均衡调用
+          predicates: # 路由谓词工厂
+            - Path=/** # 匹配全部的路径
+            - Cookie=muyan-yootk-key, muyan\-\w+
+
+4、
+server:
+  port: 9501 # 网关服务的端口
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: false # 取消默认路由配置，默认值就是false
+      routes: # 定义静态路由
+        - id: dept # 路由标记
+          uri: lb://dept.provider # 负载均衡调用
+          predicates: # 路由谓词工厂
+            - Path=/** # 匹配全部的路径
+            - Header=X-Muyan-Request-Id, \d+ # 具有指定的头信息允许访问
+
+5、
+server:
+  port: 9501 # 网关服务的端口
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: false # 取消默认路由配置，默认值就是false
+      routes: # 定义静态路由
+        - id: dept # 路由标记
+          uri: lb://dept.provider # 负载均衡调用
+          predicates: # 路由谓词工厂
+            - Path=/** # 匹配全部的路径
+            - Host=gateway-**,**.yootk.com # 特定主机访问
+            - Method=GET # 只允许GET模式访问
+
+6、
+server:
+  port: 9501 # 网关服务的端口
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: false # 取消默认路由配置，默认值就是false
+      routes: # 定义静态路由
+        - id: dept # 路由标记
+          uri: lb://dept.provider # 负载均衡调用
+          predicates: # 路由谓词工厂
+            - Path=/** # 匹配全部的路径
+            - Query=msg, yootk-\w+ # 参数名称以及匹配的数据内容
+
+7、
+gateway-9501:9501/provider/dept/list?msg=yootk-lixinghua
+
+8、
+
+
+9、
+

@@ -1,0 +1,105 @@
+1、
+package com.alibaba.csp.sentinel.context;
+public class Context {
+    private final String name;
+    private DefaultNode entranceNode; // 进行数据统计的时候都会有DefaultNode对象实例
+    private Entry curEntry; // 当前的实体对象
+    private String origin = ""; // 源
+    private final boolean async; // 异步处理标记
+}
+
+
+2、
+package com.alibaba.csp.sentinel.context;
+public class ContextUtil {
+    // 每一次用户的访问Context都会保存在ThreadLocal集合之中
+    private static ThreadLocal<Context> contextHolder = new ThreadLocal<>();
+    // 对当前的Context进行访问统计的集合
+    private static volatile Map<String, DefaultNode> contextNameNodeMap = new HashMap<>();
+    private static final ReentrantLock LOCK = new ReentrantLock(); // 独占锁（互斥锁）
+    private static final Context NULL_CONTEXT = new NullContext();
+    static {
+        initDefaultContext();// 初始化默认的Context
+    }
+    private static void initDefaultContext() {
+        String defaultContextName = Constants.CONTEXT_DEFAULT_NAME; // 获取默认名称
+        EntranceNode node = new EntranceNode(new StringResourceWrapper(defaultContextName, EntryType.IN), null); // 创建Node接口对象，同时定义ResourceWraper对象实例
+        Constants.ROOT.addChild(node); // 节点追加
+        contextNameNodeMap.put(defaultContextName, node); // Map集合保存Node
+    }
+    static void resetContextMap() {
+        if (contextNameNodeMap != null) {
+            RecordLog.warn("Context map cleared and reset to initial state");
+            contextNameNodeMap.clear();
+            initDefaultContext();
+        }
+    }
+    public static Context enter(String name, String origin) {
+        if (Constants.CONTEXT_DEFAULT_NAME.equals(name)) {
+            throw new ContextNameDefineException(
+                "The " + Constants.CONTEXT_DEFAULT_NAME + " can't be permit to defined!");
+        }
+        return trueEnter(name, origin); 
+    }
+    protected static Context trueEnter(String name, String origin) { // 核心的处理
+        Context context = contextHolder.get();// 获取当前的Context对象
+        if (context == null) { // 没有存在Context
+            Map<String, DefaultNode> localCacheNameMap = contextNameNodeMap; // 通过Map集合获取
+            DefaultNode node = localCacheNameMap.get(name); // 获取初始化的时候保存的Node
+            if (node == null) { // 节点为空（无法进行数据的存储）
+                if (localCacheNameMap.size() > Constants.MAX_CONTEXT_NAME_SIZE) {
+                    setNullContext();// 设置空的Context
+                    return NULL_CONTEXT;
+                } else {
+                    try {
+                        LOCK.lock();// 独占锁，只允许单线程访问
+                        node = contextNameNodeMap.get(name); // 获取节点对象实例
+                        if (node == null) { // 节点为空
+                            if (contextNameNodeMap.size() > Constants.MAX_CONTEXT_NAME_SIZE) {
+                                setNullContext();// 空上下文处理
+                                return NULL_CONTEXT;
+                            } else {
+                                node = new EntranceNode(new StringResourceWrapper(
+name, EntryType.IN), null); // 初始化节点
+                                Constants.ROOT.addChild(node); // 追加节点
+                                Map<String, DefaultNode> newMap = new HashMap<>(
+contextNameNodeMap.size() + 1);
+                                newMap.putAll(contextNameNodeMap); // 保存节点的Map集合
+                                newMap.put(name, node);
+                                contextNameNodeMap = newMap;
+                            }
+                        }
+                    } finally {
+                        LOCK.unlock();// 解锁
+                    }
+                }
+            }
+            context = new Context(node, name); // 每一个Context保存有节点对象
+            context.setOrigin(origin); // 设置操作源
+            contextHolder.set(context); // 保存在当前线程之中（每一次的请求）
+        }
+        return context;
+    }
+}
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

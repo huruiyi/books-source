@@ -1,0 +1,70 @@
+1、
+@Bean
+public RouteLocator routeDefinitionRouteLocator(GatewayProperties properties,
+      List<GatewayFilterFactory> gatewayFilters,
+      List<RoutePredicateFactory> predicates,
+      RouteDefinitionLocator routeDefinitionLocator,
+      ConfigurationService configurationService) {
+   return new RouteDefinitionRouteLocator(routeDefinitionLocator, predicates,
+         gatewayFilters, properties, configurationService);
+}
+@Bean
+@Primary
+@ConditionalOnMissingBean(name = "cachedCompositeRouteLocator")
+public RouteLocator cachedCompositeRouteLocator(List<RouteLocator> routeLocators) {
+   return new CachingRouteLocator(
+         new CompositeRouteLocator(Flux.fromIterable(routeLocators)));
+}
+
+
+2、
+package org.springframework.cloud.gateway.route;
+import reactor.core.publisher.Flux;
+public interface RouteLocator {
+   Flux<Route> getRoutes();// 此时数据将采用异步返回的形式处理，同时可以获取多个路由信息
+}
+
+
+3、
+package org.springframework.cloud.gateway.route;
+public class Route implements Ordered {
+   private final String id; // 路由的标记
+   private final URI uri; // 路由的访问地址
+   private final int order; // 顺序，与Ordered有关
+   private final AsyncPredicate<ServerWebExchange> predicate;  // 断言
+   private final List<GatewayFilter> gatewayFilters; // 网关过滤
+   private final Map<String, Object> metadata; // 元数据信息
+}
+
+
+4、
+package org.springframework.cloud.gateway.route;
+@Validated // 【JSR303验证标准】该配置Bean必须验证（后面会有动态路由配置）
+public class RouteDefinition {
+   private String id;
+   @NotEmpty // 非空验证
+   @Valid
+   private List<PredicateDefinition> predicates = new ArrayList<>();
+   @Valid // 验证
+   private List<FilterDefinition> filters = new ArrayList<>();
+   @NotNull
+   private URI uri;
+   private Map<String, Object> metadata = new HashMap<>();
+   private int order = 0;
+}
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

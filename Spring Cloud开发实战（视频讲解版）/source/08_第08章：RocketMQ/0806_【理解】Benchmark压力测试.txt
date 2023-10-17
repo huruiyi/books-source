@@ -1,0 +1,27 @@
+1、
+chmod 777 -R /usr/local/rocketmq/benchmark/
+
+2、
+
+/usr/local/rocketmq/benchmark/consumer.sh -t TopicBenchmark -n rocketmq-server:9876 -g muyan-group
+
+3、
+/usr/local/rocketmq/benchmark/producer.sh -t TopicBenchmark -n rocketmq-server:9876
+
+4、
+/usr/local/rocketmq/benchmark/shutdown.sh producer
+
+5、
+/usr/local/rocketmq/benchmark/shutdown.sh consumer
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

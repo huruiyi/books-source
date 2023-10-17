@@ -1,0 +1,47 @@
+1、
+https://docs.spring.io/spring-cloud-config/docs/3.0.4/reference/html/
+
+2、
+ssh-keygen -m PEM
+
+3、
+git init
+
+4、
+message.provider-dev.yml
+yootk:
+  message:
+    flag: dev
+    content: 沐言科技：www.yootk.com
+
+
+message.provider-test.yml
+yootk:
+  message:
+    flag: test
+    content: 李兴华高薪就业编程训练营：edu.yootk.com
+
+
+
+message.provider-prod.yml
+
+yootk:
+  message:
+    flag: prod
+    content: 课程资源下载：www.yootk.com/resources
+
+
+5、
+git add .
+
+6、
+git commit -m "Create Message Config Files"
+
+7、
+git remote add origin git@gitlab-server:muyan/microcloud.git
+
+8、
+git push -u origin master
+
+9、
+

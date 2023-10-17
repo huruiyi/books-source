@@ -1,0 +1,115 @@
+1、
+// https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-config-server
+implementation group: 'org.springframework.cloud', name: 'spring-cloud-config-server', version: '3.0.5'
+
+
+2、
+project(":config-server-7501") {    // 部门微服务
+    dependencies {
+        implementation("org.springframework.boot:spring-boot-starter-web")
+        implementation("org.springframework.cloud:spring-cloud-config-server")
+        implementation(libraries.'spring-boot-admin-starter-client')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+3、
+git@gitlab-server:muyan/microcloud.git
+
+4、
+server: # 服务端配置
+  port: 7501 # 7501端口
+spring:
+  application: # 配置应用信息
+    name: config.server # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        weight: 80
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        metadata:  # 根据自身的需要配置元数据
+          version: 1.0 # 自定义元数据项
+          company: 沐言科技 # 自定义元数据项
+          url: www.yootk.com # 自定义元数据项
+          author: 李兴华（爆可爱的小李老师） # 自定义元数据项
+    config: # 定义SpringCloudConfig的配置服务器
+      server: # 服务器的信息配置
+        git: # 此时的存储类型为git
+          uri:  git@gitlab-server:muyan/microcloud.git # GITLab仓库地址
+          default-label: master # 定义GIT分支名称
+          search-paths: # 定义仓库的配置匹配
+            - provider-* # 以provider-开头的所有的配置
+          private-key: # 私钥（.ssh目录下的id_rsa）
+            -----BEGIN RSA PRIVATE KEY-----
+            MIIEpAIBAAKCAQEAuJDjXdP9IOwHmKNxQqPZVDBh/ybWLf5s0q28JbPg1aVXch4h
+            TUPt7heC4GgEVmZa2zlHu+iyu2tcyn2NjhpxwRXMkj8hMQ68Rtu0SWkJBDbuTd+W
+            b9PzRT5OnurVVDPGte58s4yWMT2lLmmWALDj9wjNe2Za+DA+5kRjpT3NmlFtmoJF
+            t7B/LraESRfDqB4/37Mql9Q2gOJ+nEkrqqw7A3PTF/wBAb34jTe83qn3c0pCPWji
+            +KP8s4g5M+aUdk8XtzHEA0DLMPtK3l3flipe71AtkRHNQeMzEzeXcqUHA7swdJRj
+            CSG1KVTI7sjlfg5itzO4LK1fnu6bdLHJ4RgN0QIDAQABAoIBACujHg7GG1gYVidx
+            pUqzQKQWGGViQkt3lzUsnIpxgBwjToyNsSP6hpu/dVMnZLck1iB054/3EaMcXEEH
+            9Fr/x5t2UvrU8D0QFdXPBk5BBj+32RoSXhgsjZz2gVIzhaK15yqGq3csKyqTP6W8
+            kxmwuQVkUGj3p1R827JHwyODfEQay7lP+4iXIozO5NDv4JGOx6ko9eKuKRFYRZ9A
+            zB+BpWpyMTqrh80DtYO9R8AjAEOem+De62ZHX4YBB7RbyFMY7ZIrnlfGkr4KcfO0
+            pOq7mf733ujfYXcpXyjWnCw0CL515nAFVQwxX5ZMFdG46RzlgV9YlV1dIOy2IC73
+            NUxPXL0CgYEA3O43PKBEBi0WPRQ2JQnEf8s/BxcZF7D1C3GsgcP0qQC+4vg1sR1Q
+            VYEbAI0ZM8gd0HjQp8cQgSp1RoFm3oNLVGj1LtXVrKn1Li2Ft0QjLdU0PeDEXZY8
+            VJsXxFLMIFzl4PCQTMMOUmsepJeZTxQLfOP8zerpxkjmKtxlWxOyF0cCgYEA1dz0
+            IpuRXN8KEj3XTUa3CxrWUzCRbKLvGkF8vO3O/8LXX8MLLqictt2blEv4BE6OcQQ9
+            GCo2FwuzNgQKbh2vedVDbj8QkrZ0MdX1Tr48Ljv/MOL4EHLJpDHQE1A3+5v3zyD1
+            BK+shtkMOZ+WXsofebYJ0PaiAY5akdnh3XRabicCgYEAl54j6kdSZ6qpiGFGh0Sc
+            xdcF+iev4MJgaOoqKSQB07nfRoRw1Iv5hbSEg2xRz2eWjmtbRskmWn543VoQ7sPL
+            /rHJEctOSKCa0oYLLipkuh+HKrAGEvP3k1ichu8Lh2o5mJV/ci6qtYUuEma3n71x
+            5NPRur9sj9eXnfKC3G432iECgYAia7GPcGJxBCTm0rU4Zs1HKEaelQ6S4ZaCL1AY
+            SF4so/tuGkJOfCzc8cX8lE2Sw+IBJqF+piyWgPeTFgtntbdscHqt39CXDG6fJsSY
+            q92bw2RLRfyPCSqTFsFammqoQG4eFDvbSTsHaR+ilqDpGLcAK+BglZF1lqfVGbBU
+            qEl1uQKBgQCPBiphh5yLGTmJBrcFtK1fX1Y8r4ibgyWKyXdlK2XXvKRdGrZM7Asm
+            3ftcUu+kruC82cqzpyV5aD77xfGJb1JzazbX7fgq4DlOb1JTYDVMkZ7pIw6a2oiN
+            3SI9no+9bfhtu/Lqk2pBYa9YPScPaMEmxr/zwcM54nr49cy3/l5EXQ==
+            -----END RSA PRIVATE KEY-----
+
+
+5、
+package com.yootk;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.config.server.EnableConfigServer;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+@EnableConfigServer
+public class StartConfigServerApplication7501 {
+    public static void main(String[] args) {
+        SpringApplication.run(StartConfigServerApplication7501.class, args);
+    }
+}
+
+
+6、
+127.0.0.1	config-server-7501
+
+7、
+config-server-7501:7501/master/message.provider-dev.yml
+config-server-7501:7501/master/message.provider-test.yml
+config-server-7501:7501/master/message.provider-prod.yml
+
+8、
+https://docs.spring.io/spring-cloud-config/docs/3.0.4/reference/html/#_spring_cloud_config_server
+
+9、
+

@@ -1,0 +1,58 @@
+1、
+// https://mvnrepository.com/artifact/com.alibaba.cloud/spring-cloud-starter-alibaba-nacos-discovery
+implementation group: 'com.alibaba.cloud', name: 'spring-cloud-starter-alibaba-nacos-discovery', version: '2.2.6.RELEASE'
+gradle dependencies
+
+2、
+// https://mvnrepository.com/artifact/com.alibaba.cloud/spring-cloud-starter-alibaba-nacos-config
+implementation group: 'com.alibaba.cloud', name: 'spring-cloud-starter-alibaba-nacos-config', version: '2.2.6.RELEASE'
+
+
+3、
+project(":provider-dept-8001") {    // 部门微服务
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation(libraries.'mybatis-plus-boot-starter')
+        implementation(libraries.'mysql-connector-java')
+        implementation(libraries.'druid')
+        implementation(libraries.'springfox-boot-starter')
+        implementation('org.springframework.boot:spring-boot-starter-security')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+4、
+spring: # Spring配置项
+  cloud: # SpringCloud配置项
+    nacos: # Nacos注册中心的配置
+      config: # gRPC通讯配置
+        server-addr: nacos-server:8848 # Nacos地址
+
+5、
+spring:
+  application: # 配置应用信息
+    name: dept.provider # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos服务地址
+
+6、
+http://nacos-server:8848/nacos/
+
+7、
+
+
+8、
+
+
+9、
+

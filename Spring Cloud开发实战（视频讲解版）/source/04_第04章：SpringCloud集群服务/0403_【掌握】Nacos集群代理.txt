@@ -1,0 +1,71 @@
+1、
+https://nginx.org/
+
+2、
+vi /etc/sysconfig/network-scripts/ifcfg-ens33 
+
+3、
+vi /etc/hostname
+
+4、
+vi /etc/hosts
+
+192.168.190.151 nacos-cluster-a
+192.168.190.152 nacos-cluster-b
+192.168.190.153 nacos-cluster-c
+192.168.190.155 nacos-proxy
+
+5、
+cd /var/ftp
+
+6、
+wget https://nginx.org/download/nginx-1.21.1.tar.gz
+
+7、
+tar xzvf /var/ftp/nginx-1.21.1.tar.gz -C /usr/local/src
+
+8、
+mkdir -p /usr/local/nginx/{logs,conf,sbin}
+
+
+9、
+yum -y install pcre-devel openssl openssl-devel
+
+10、
+./configure --prefix=/usr/local/nginx/ --sbin-path=/usr/local/nginx/sbin/ --with-http_ssl_module \
+--conf-path=/usr/local/nginx/conf/nginx.conf --pid-path=/usr/local/nginx/logs/nginx.pid \
+--error-log-path=/usr/local/nginx/logs/error.log --http-log-path=/usr/local/nginx/logs/access.log --with-http_v2_module
+
+
+11、
+make && make install
+
+
+12、
+vi /usr/local/nginx/conf/nginx.conf
+
+13、
+    upstream nacoscluster {
+       server nacos-cluster-a:8848 weight=3 ;
+       server nacos-cluster-b:8848 weight=1 ;
+       server nacos-cluster-c:8848 weight=2 ;
+    } 
+
+
+14、
+        location / {
+           proxy_pass http://nacoscluster;
+           root /nacos/;
+        }
+
+15、
+/usr/local/nginx/sbin/nginx -t
+
+16、
+firewall-cmd --zone=public --add-port=8848/tcp --permanent
+firewall-cmd --reload
+
+17、/usr/local/nginx/sbin/nginx
+
+18、nacos-proxy:8848/nacos
+

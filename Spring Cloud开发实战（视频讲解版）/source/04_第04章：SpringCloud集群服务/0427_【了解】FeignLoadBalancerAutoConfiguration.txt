@@ -1,0 +1,140 @@
+1、
+// https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-commons
+implementation group: 'org.springframework.cloud', name: 'spring-cloud-commons', version: '3.0.3'
+
+// https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-loadbalancer
+implementation group: 'org.springframework.cloud', name: 'spring-cloud-loadbalancer', version: '3.0.3'
+
+2、
+project(":consumer-springboot-80") { // 消费端模块
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+        implementation(libraries.'httpclient') // 引入httpclient组件
+        implementation(libraries.'feign-httpclient') // 引入feign-httpclient组件
+        implementation group: 'org.springframework.cloud', name: 'spring-cloud-commons', version: '3.0.3'
+        implementation group: 'org.springframework.cloud', name: 'spring-cloud-loadbalancer', version: '3.0.3'
+    }
+}
+
+3、
+package org.springframework.cloud.loadbalancer.blocking.client;
+@SuppressWarnings({ "unchecked", "rawtypes" })
+// 整体的设计的形式和Ribbon的结构很相似，原因就在于：所有的加载都需要有一个列表先提供，而后再进行选择
+public class BlockingLoadBalancerClient implements LoadBalancerClient { // 负载均衡客户端
+   private final LoadBalancerClientFactory loadBalancerClientFactory; // 负载均衡客户端工厂类
+   private final LoadBalancerProperties properties; // 负载均衡属性
+   public BlockingLoadBalancerClient(LoadBalancerClientFactory loadBalancerClientFactory,
+         LoadBalancerProperties properties) {
+      this.loadBalancerClientFactory = loadBalancerClientFactory;
+      this.properties = properties;
+   }
+   @Override // 服务的调用执行处理
+   public <T> T execute(String serviceId, LoadBalancerRequest<T> request) throws IOException {
+      String hint = getHint(serviceId); // 
+      LoadBalancerRequestAdapter<T, DefaultRequestContext> lbRequest = new LoadBalancerRequestAdapter<>(request,
+            new DefaultRequestContext(request, hint)); // 创建一个负载均衡请求
+// 把每一个请求不再单独进行简单的请求处理，而是将其封装在一个处理的周期调用结构里面
+      Set<LoadBalancerLifecycle> supportedLifecycleProcessors = getSupportedLifecycleProcessors(serviceId); // 设置处理周期
+      supportedLifecycleProcessors.forEach(lifecycle -> lifecycle.onStart(lbRequest));
+      ServiceInstance serviceInstance = choose(serviceId, lbRequest); // 获取一个主机信息
+      if (serviceInstance == null) {
+         supportedLifecycleProcessors.forEach(lifecycle -> lifecycle.onComplete(
+               new CompletionContext<>(CompletionContext.Status.DISCARD, lbRequest, new EmptyResponse())));// 迭代处理，配置处理完成后的上下文
+         throw new IllegalStateException("No instances available for " + serviceId);
+      }
+      return execute(serviceId, serviceInstance, lbRequest); // 执行调用
+   }
+   @Override
+   public <T> T execute(String serviceId, ServiceInstance serviceInstance, LoadBalancerRequest<T> request) throws IOException { // 真正的进行请求的发出了
+      DefaultResponse defaultResponse = new DefaultResponse(serviceInstance); // 接收响应
+      Set<LoadBalancerLifecycle> supportedLifecycleProcessors = 
+getSupportedLifecycleProcessors(serviceId);
+      Request lbRequest = request instanceof Request ? (Request) request : new DefaultRequest<>();
+      supportedLifecycleProcessors
+            .forEach(lifecycle -> lifecycle.onStartRequest(lbRequest, new DefaultResponse(serviceInstance))); // 进行所有的请求处理
+      try {
+         T response = request.apply(serviceInstance); // 请求的发送
+         Object clientResponse = getClientResponse(response); // 请求的接收
+         supportedLifecycleProcessors
+               .forEach(lifecycle -> lifecycle.onComplete(new CompletionContext<>(CompletionContext.Status.SUCCESS,
+                     lbRequest, defaultResponse, clientResponse)));
+         return response;
+      }
+      catch (IOException iOException) {
+         supportedLifecycleProcessors.forEach(lifecycle -> lifecycle.onComplete(
+               new CompletionContext<>(CompletionContext.Status.FAILED, iOException, lbRequest, defaultResponse)));
+         throw iOException;
+      }
+      catch (Exception exception) {
+         supportedLifecycleProcessors.forEach(lifecycle -> lifecycle.onComplete(
+               new CompletionContext<>(CompletionContext.Status.FAILED, exception, lbRequest, defaultResponse)));
+         ReflectionUtils.rethrowRuntimeException(exception);
+      }
+      return null;
+   }
+   private <T> Object getClientResponse(T response) { // 接收请求响应了
+      ClientHttpResponse clientHttpResponse = null;
+      if (response instanceof ClientHttpResponse) {
+         clientHttpResponse = (ClientHttpResponse) response;
+      }
+      if (clientHttpResponse != null) {
+         try {
+            return new ResponseData(clientHttpResponse, null);
+         } catch (IOException ignored) { }
+      }
+      return response;
+   }
+   private Set<LoadBalancerLifecycle> getSupportedLifecycleProcessors(String serviceId) {
+      return LoadBalancerLifecycleValidator.getSupportedLifecycleProcessors(
+            loadBalancerClientFactory.getInstances(serviceId, LoadBalancerLifecycle.class),
+            DefaultRequestContext.class, Object.class, ServiceInstance.class);
+   }
+   @Override
+   public URI reconstructURI(ServiceInstance serviceInstance, URI original) {
+      return LoadBalancerUriTools.reconstructURI(serviceInstance, original);
+   }
+   @Override
+   public ServiceInstance choose(String serviceId) {
+      return choose(serviceId, REQUEST);
+   }
+   @Override
+   public <T> ServiceInstance choose(String serviceId, Request<T> request) {
+      ReactiveLoadBalancer<ServiceInstance> loadBalancer = loadBalancerClientFactory.getInstance(serviceId);
+      if (loadBalancer == null) {
+         return null;
+      }
+      Response<ServiceInstance> loadBalancerResponse = Mono.from(loadBalancer.choose(request)).block();
+      if (loadBalancerResponse == null) {
+         return null;
+      }
+      return loadBalancerResponse.getServer();
+   }
+   private String getHint(String serviceId) { // 根据服务的名称获取属性信息
+      String defaultHint = properties.getHint().getOrDefault("default", "default");
+      String hintPropertyValue = properties.getHint().get(serviceId);
+      return hintPropertyValue != null ? hintPropertyValue : defaultHint;
+   }
+}
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

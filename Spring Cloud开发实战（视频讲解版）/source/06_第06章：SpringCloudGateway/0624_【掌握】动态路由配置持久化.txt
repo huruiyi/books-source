@@ -1,0 +1,179 @@
+1、
+[
+  {
+    "id": "dept",
+    "uri": "lb://dept.provider",
+    "order": 1,
+    "predicates": [
+      {
+        "name": "Path",
+        "args": {
+          "pattern": "/**"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "name": "AddRequestHeader",
+        "args": {
+          "_genkey_0": "Request-Token-Muyan",
+          "_genkey_1": "www.yootk.com"
+        }
+      }
+    ]
+  }
+]
+
+2、
+project(":gateway-9501") {  // 网关模块
+    dependencies {
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+        implementation('org.springframework.cloud:spring-cloud-starter-gateway') // 网关依赖
+        implementation('org.springframework.boot:spring-boot-starter-actuator') // Actuator依赖库
+        implementation('org.springframework.cloud:spring-cloud-starter-loadbalancer')
+        implementation(libraries.'caffeine')
+        implementation(libraries.'micrometer-registry-prometheus')
+        implementation(libraries.'micrometer-core')
+    }
+}
+
+3、
+package com.yootk.gateway.config;
+
+import com.alibaba.nacos.api.PropertyKeyConst;
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+import java.util.Properties;
+
+@Component
+@Data
+@ConfigurationProperties(prefix = "spring.cloud.nacos.discovery")
+public class GatewayNacosConfig { // 自定义配置存储类
+    private String serverAddr;
+    private String namespace;
+    private String group;
+    private String username;
+    private String password;
+    private String dataId = "gateway.config";
+    private long timeout = 2000;
+    public Properties getNacosProperties() {
+        Properties properties = new Properties();
+        properties.put(PropertyKeyConst.SERVER_ADDR, this.serverAddr);
+        properties.put(PropertyKeyConst.NAMESPACE, this.namespace);
+        properties.put(PropertyKeyConst.USERNAME, this.username);
+        properties.put(PropertyKeyConst.PASSWORD, this.password);
+        return properties;
+    }
+}
+
+
+4、
+package com.yootk.gateway.listener;
+
+import com.alibaba.nacos.api.NacosFactory;
+import com.alibaba.nacos.api.config.ConfigService;
+import com.alibaba.nacos.api.config.listener.Listener;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yootk.gateway.config.GatewayNacosConfig;
+import com.yootk.gateway.service.DynamicRouteService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.cloud.gateway.route.RouteDefinition;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.Executor;
+
+@Component
+@Slf4j
+public class GatewayNacosRouteListener implements CommandLineRunner {
+    @Autowired
+    private DynamicRouteService dynamicRouteService; // 设置业务层处理
+    @Autowired
+    private GatewayNacosConfig nacosConfig; // Nacos服务配置
+    // 因为Nacos里面保存的数据类型是JSON数据，所以需要对JSON进行解析，直接使用Jackson组件了
+    @Autowired
+    private ObjectMapper mapper; // 获取Jackson组件
+
+    @Override
+    public void run(String... args) throws Exception {
+        this.nacosDynmaicRouteListener();// 启动时加载配置
+    }
+
+    public void nacosDynmaicRouteListener() {   // 动态路由监听
+        try {
+            ConfigService configService = NacosFactory.createConfigService(this.nacosConfig.getNacosProperties());
+            String content = configService.getConfig(this.nacosConfig.getDataId(), this.nacosConfig.getGroup(), this.nacosConfig.getTimeout()); // 获取指定的配置项
+            log.info("【网关启动】读取Nacos网关配置项：{}", content); // 日志输出
+            GatewayNacosRouteListener.this.setRoute(content); // 路由配置
+            configService.addListener(this.nacosConfig.getDataId(), this.nacosConfig.getGroup(), new Listener() {
+                @Override
+                public Executor getExecutor() {
+                    return null;
+                }
+
+                @Override
+                public void receiveConfigInfo(String configInfo) {
+                    log.info("【网关更新】读取Nacos网关配置项：{}", configInfo); // 日志输出
+                    GatewayNacosRouteListener.this.setRoute(configInfo);
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    private void setRoute(String configInfo) { // 定义路由处理
+        try {   // 将读取到的数据内容转为路由的配置定义，本操作是由Jackson组件完成的
+            RouteDefinition[] routes = this.mapper.readValue(configInfo, RouteDefinition[].class);
+            for (RouteDefinition route : routes) {
+                this.dynamicRouteService.update(route); // 业务更新
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+5、
+[
+  {
+    "id": "dept",
+    "uri": "lb://dept.provider",
+    "order": 1,
+    "predicates": [
+      {
+        "name": "Path",
+        "args": {
+          "pattern": "/provider/dept/list"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "name": "AddRequestHeader",
+        "args": {
+          "_genkey_0": "Request-Token-Muyan",
+          "_genkey_1": "www.yootk.com"
+        }
+      }
+    ]
+  }
+]
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

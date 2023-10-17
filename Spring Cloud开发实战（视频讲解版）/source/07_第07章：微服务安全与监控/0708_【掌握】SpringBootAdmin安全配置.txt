@@ -1,0 +1,73 @@
+1、
+project(":microcloud-admin-8000") {    // 部门微服务
+    dependencies {
+        implementation('org.springframework.boot:spring-boot-starter-security')
+        implementation("org.springframework.boot:spring-boot-starter-web")
+        implementation(libraries.'spring-boot-admin-starter-server')
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+2、
+package com.yootk.admin.config;
+
+import de.codecentric.boot.admin.server.config.AdminServerProperties;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+
+@Configuration
+public class AdminSecurityConfig extends WebSecurityConfigurerAdapter {
+    private String adminContextPath;
+    public AdminSecurityConfig(AdminServerProperties adminServerProperties) {
+        this.adminContextPath = adminServerProperties.getContextPath(); // 上下文的处理路径
+    }
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        SavedRequestAwareAuthenticationSuccessHandler successHandler =
+                new SavedRequestAwareAuthenticationSuccessHandler();
+        successHandler.setTargetUrlParameter("redirectTo");
+        http.authorizeRequests()
+                .antMatchers(this.adminContextPath + "/assets/**").permitAll()
+                .antMatchers(this.adminContextPath + "/login").permitAll()
+                .anyRequest().authenticated()
+                .and().formLogin().loginPage(this.adminContextPath + "/login")
+                .successHandler(successHandler)
+                .and().logout().logoutUrl(this.adminContextPath + "/logout")
+                .and().httpBasic().and().csrf().disable();
+    }
+}
+
+
+3、
+spring:
+  security:
+    user:
+      name: muyan
+      password: yootk
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

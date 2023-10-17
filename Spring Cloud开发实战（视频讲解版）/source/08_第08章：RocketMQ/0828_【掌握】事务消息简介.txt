@@ -1,0 +1,167 @@
+1、
+vi /usr/local/rocketmq/conf/broker.conf
+
+transactionCheckMax=15
+transactionCheckInterval=10000
+transactionTimeOut=6000
+
+
+2、
+nohup /usr/local/rocketmq/bin/mqbroker -c /usr/local/rocketmq/conf/broker.conf > /usr/local/rocketmq/logs/rocketmq-broker.log 2>&1 &
+
+3、
+package com.yootk.rockemq.transaction;
+
+import org.apache.rocketmq.client.producer.LocalTransactionState;
+import org.apache.rocketmq.client.producer.TransactionListener;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageExt;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class TransactionListenerImpl implements TransactionListener { // 事务消息监听
+    private AtomicInteger transactionIndex = new AtomicInteger(0); // 操作计数
+    // 保存每一个事务消息对应的业务的处理状态（KEY = 事务ID、VALUE=业务标记状态）
+    private ConcurrentHashMap<String, Integer> localTransMap = new ConcurrentHashMap<>();
+    @Override
+    public LocalTransactionState executeLocalTransaction(Message msg, Object arg) {
+        // 此时需要在此方法里面编写具体的分布式业务更新方法调用代码
+        int value = this.transactionIndex.getAndIncrement(); // 获取一个标记值
+        int status = value % 3; // 每次调用此方法都会计算一个status内容
+        this.localTransMap.put(msg.getTransactionId(), status); // 保存数据
+        System.out.println("【executeLocalTransaction()】调用微服务方法：" + this.localTransMap);
+        return LocalTransactionState.UNKNOW; // 执行分布式业务处理的时候不知道是否成功或失败
+    }
+    @Override
+    public LocalTransactionState checkLocalTransaction(MessageExt msg) {
+        System.err.println("【checkLocalTransaction()】检查事务状态：" + this.localTransMap);
+        Integer status = this.localTransMap.get(msg.getTransactionId()); // 获取事务消息的ID
+        if (status != null) {   // 获取到了事务的内容
+            switch(status) {
+                case 0: // 不知道的状态
+                    int value = this.transactionIndex.getAndIncrement(); // 模拟业务处理
+                    status = value % 3; // 每次调用此方法都会计算一个status内容
+                    this.localTransMap.put(msg.getTransactionId(), status); // 保存数据
+                    return LocalTransactionState.UNKNOW;
+                case 1: // 成功的状态
+                    return LocalTransactionState.COMMIT_MESSAGE; // 整个的事务成功
+                case 2: // 表示失败的状态
+                    return LocalTransactionState.ROLLBACK_MESSAGE; // 整个的事务需要回滚
+            }
+        }
+        return LocalTransactionState.COMMIT_MESSAGE;
+    }
+}
+
+
+4、
+
+package com.yootk.rockemq.transaction;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.producer.*;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.remoting.RPCHook;
+import org.apache.rocketmq.remoting.common.RemotingHelper;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+public class TransactionMessageProducer { // 消息生产者
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String PRODUCER_GROUP = "muyan-group"; // 定义消费组
+    public static final String TOPIC = "TopicTransaction"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、事务消息创建的核心的主题在于TransactionListener接口实例的配置
+        TransactionListener transactionListener = new TransactionListenerImpl();
+        // 3、创建事务消息的生产者
+        TransactionMQProducer producer = new TransactionMQProducer(PRODUCER_GROUP, clientHook);
+        producer.setNamesrvAddr(NAME_SERVER_LIST); // NameServer地址
+        producer.setExecutorService(Executors.newFixedThreadPool(8)); // 配置线程池
+        producer.setTransactionListener(transactionListener); // 事务监听类
+        producer.start(); // 启动生产者
+        sendDeptMessage(producer); // 发送部门的消息
+        sendEmpMessage(producer); // 发送雇员的消息
+        TimeUnit.MINUTES.sleep(Long.MAX_VALUE); // 保持运行状态不关闭
+        producer.shutdown(); // 关闭生产者
+    }
+
+    public static void sendDeptMessage(TransactionMQProducer producer) throws Exception {
+        Message msg = new Message(TOPIC, "dept", "【DEPT】增加新部门事务".getBytes(RemotingHelper.DEFAULT_CHARSET));
+        // 发送事务消息的时候需要设置一个业务的标记，同时要返回有具体的事务消息处理的结果
+        TransactionSendResult result = producer.sendMessageInTransaction(msg, "DeptProvider");
+        TimeUnit.MICROSECONDS.sleep(10); // 模拟分布式的业务调用
+    }
+
+    public static void sendEmpMessage(TransactionMQProducer producer) throws Exception {
+        for (int x = 0; x < 3; x++) { // 循环配置多个消息
+            Message msg = new Message(TOPIC, "emp", ("【EMP】增加新雇员事务 - " + x).getBytes(RemotingHelper.DEFAULT_CHARSET));
+            // 发送事务消息的时候需要设置一个业务的标记，同时要返回有具体的事务消息处理的结果
+            TransactionSendResult result = producer.sendMessageInTransaction(msg, "EmpProvider");
+            TimeUnit.MICROSECONDS.sleep(10); // 模拟分布式的业务调用
+        }
+    }
+}
+5、
+package com.yootk.rockemq.transaction;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
+import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
+import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
+import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
+import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.remoting.RPCHook;
+
+import java.util.List;
+
+public class TransactionMessageConsumer { // 消息消费者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String CONSUMER_GROUP = "muyan-group"; // 定义消费组
+    public static final String TOPIC = "TopicTransaction"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、要在项目之中启动一个消费者的处理程序类，但是这个消费者分为两种形式
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(CONSUMER_GROUP, clientHook, new AllocateMessageQueueAveragely());
+        consumer.setNamesrvAddr(NAME_SERVER_LIST); // 通过NameServer获取相应的Broker数据
+        consumer.subscribe(TOPIC, "*"); // 匹配指定主题的所有消息
+        // 3、进行消息监听的处理操作，在监听的时候要使用专属的监听接口
+        consumer.registerMessageListener(new MessageListenerConcurrently() { // 准备接收消息
+            @Override
+            public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs, ConsumeConcurrentlyContext context) {
+                msgs.forEach((msg)->{
+                    System.out.printf("【%s】接收到新的消息：body = %s、level = %s %n", Thread.currentThread().getName(), new String(msg.getBody()), msg.getProperty("level"));
+                });
+                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS; // 消息消费成功
+            }
+        });
+        consumer.start(); // 启动消息的消费者
+    }
+}
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

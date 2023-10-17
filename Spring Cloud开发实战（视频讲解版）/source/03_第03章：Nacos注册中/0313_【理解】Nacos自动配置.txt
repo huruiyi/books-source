@@ -1,0 +1,42 @@
+1、
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.alibaba.cloud.nacos.discovery.NacosDiscoveryAutoConfiguration,\
+  com.alibaba.cloud.nacos.ribbon.RibbonNacosAutoConfiguration,\
+  com.alibaba.cloud.nacos.endpoint.NacosDiscoveryEndpointAutoConfiguration,\
+  com.alibaba.cloud.nacos.registry.NacosServiceRegistryAutoConfiguration,\
+  com.alibaba.cloud.nacos.discovery.NacosDiscoveryClientConfiguration,\
+  com.alibaba.cloud.nacos.discovery.reactive.NacosReactiveDiscoveryClientConfiguration,\
+  com.alibaba.cloud.nacos.discovery.configclient.NacosConfigServerAutoConfiguration
+org.springframework.cloud.bootstrap.BootstrapConfiguration=\
+  com.alibaba.cloud.nacos.discovery.configclient.NacosDiscoveryClientConfigServiceBootstrapConfiguration
+
+
+2、
+org.springframework.cloud.bootstrap.BootstrapConfiguration=\
+com.alibaba.cloud.nacos.NacosConfigBootstrapConfiguration
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.alibaba.cloud.nacos.NacosConfigAutoConfiguration,\
+com.alibaba.cloud.nacos.endpoint.NacosConfigEndpointAutoConfiguration
+org.springframework.boot.diagnostics.FailureAnalyzer=\
+com.alibaba.cloud.nacos.diagnostics.analyzer.NacosConnectionFailureAnalyzer
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

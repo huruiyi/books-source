@@ -1,0 +1,5 @@
+1、hosts主机配置
+127.0.0.1	provider-dept-8001
+127.0.0.1	consumer-springboot-80
+
+2、服务启动命令：

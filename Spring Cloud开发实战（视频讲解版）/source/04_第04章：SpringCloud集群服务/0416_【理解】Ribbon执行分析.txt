@@ -1,0 +1,345 @@
+1、
+package org.springframework.cloud.netflix.ribbon;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.util.ArrayList;
+import java.util.List;
+import com.netflix.client.IClient;
+import com.netflix.client.http.HttpRequest;
+import com.netflix.ribbon.Ribbon;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.condition.AllNestedConditions;
+import org.springframework.boot.autoconfigure.condition.AnyNestedCondition;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.client.actuator.HasFeatures;
+import org.springframework.cloud.client.loadbalancer.AsyncLoadBalancerAutoConfiguration;
+import org.springframework.cloud.client.loadbalancer.LoadBalancedRetryFactory;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
+import org.springframework.cloud.client.loadbalancer.RestTemplateCustomizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.AsyncRestTemplate;
+import org.springframework.web.client.RestTemplate;
+@Configuration
+@Conditional(RibbonAutoConfiguration.RibbonClassesConditions.class)
+@RibbonClients
+@AutoConfigureAfter(
+      name = "org.springframework.cloud.netflix.eureka.EurekaClientAutoConfiguration")
+@AutoConfigureBefore({ LoadBalancerAutoConfiguration.class,
+      AsyncLoadBalancerAutoConfiguration.class })
+@EnableConfigurationProperties({ RibbonEagerLoadProperties.class, // 饿汉式加载配置
+      ServerIntrospectorProperties.class })
+public class RibbonAutoConfiguration {
+   @Autowired(required = false)
+   private List<RibbonClientSpecification> configurations = new ArrayList<>();
+   @Autowired
+   private RibbonEagerLoadProperties ribbonEagerLoadProperties; // Ribbon饿汉式加载配置属性
+   @Bean
+   public HasFeatures ribbonFeature() {
+      return HasFeatures.namedFeature("Ribbon", Ribbon.class);
+   }
+   @Bean
+   public SpringClientFactory springClientFactory() {
+      SpringClientFactory factory = new SpringClientFactory();// 获取工厂类的对象实例
+      factory.setConfigurations(this.configurations);
+      return factory;
+   }
+   @Bean
+   @ConditionalOnMissingBean(LoadBalancerClient.class)
+   public LoadBalancerClient loadBalancerClient() { // 客户端负载均衡处理
+      return new RibbonLoadBalancerClient(springClientFactory());
+   }
+   @Bean
+   @ConditionalOnClass(name = "org.springframework.retry.support.RetryTemplate")
+   @ConditionalOnMissingBean
+   public LoadBalancedRetryFactory loadBalancedRetryPolicyFactory(
+         final SpringClientFactory clientFactory) { // Ribbon重试的处理工厂
+      return new RibbonLoadBalancedRetryFactory(clientFactory);
+   }
+   @Bean
+   @ConditionalOnMissingBean
+   public PropertiesFactory propertiesFactory() { // 属性的定义
+      return new PropertiesFactory();
+   }
+   @Bean
+   @ConditionalOnProperty("ribbon.eager-load.enabled")
+   public RibbonApplicationContextInitializer ribbonApplicationContextInitializer() {
+      return new RibbonApplicationContextInitializer(springClientFactory(),
+            ribbonEagerLoadProperties.getClients());// 饿汉式加载配置项
+   }
+   @Configuration(proxyBeanMethods = false)
+   @ConditionalOnClass(HttpRequest.class)
+   @ConditionalOnRibbonRestClient
+   protected static class RibbonClientHttpRequestFactoryConfiguration { // Ribbon客户端请求配置
+      @Autowired
+      private SpringClientFactory springClientFactory;
+      @Bean
+      public RestTemplateCustomizer restTemplateCustomizer(
+            final RibbonClientHttpRequestFactory ribbonClientHttpRequestFactory) {
+         return restTemplate -> restTemplate
+               .setRequestFactory(ribbonClientHttpRequestFactory);
+      }
+      @Bean
+      public RibbonClientHttpRequestFactory ribbonClientHttpRequestFactory() {
+         return new RibbonClientHttpRequestFactory(this.springClientFactory);
+      }
+   }
+   @Target({ ElementType.TYPE, ElementType.METHOD })
+   @Retention(RetentionPolicy.RUNTIME)
+   @Documented
+   @Conditional(OnRibbonRestClientCondition.class)
+   @interface ConditionalOnRibbonRestClient {
+   }
+   private static class OnRibbonRestClientCondition extends AnyNestedCondition {
+      OnRibbonRestClientCondition() {
+         super(ConfigurationPhase.REGISTER_BEAN);
+      }
+      @Deprecated // remove in Edgware"
+      @ConditionalOnProperty("ribbon.http.client.enabled")
+      static class ZuulProperty { // Zuul属性配置（已经废弃了）
+      }
+      @ConditionalOnProperty("ribbon.restclient.enabled")
+      static class RibbonProperty {
+      }
+   }
+   static class RibbonClassesConditions extends AllNestedConditions {
+      RibbonClassesConditions() {
+         super(ConfigurationPhase.PARSE_CONFIGURATION);
+      }
+      @ConditionalOnClass(IClient.class)
+      static class IClientPresent {} // 存在有IClient实例
+      @ConditionalOnClass(RestTemplate.class)
+      static class RestTemplatePresent {} // 存在RestTempalte实例
+      @SuppressWarnings("deprecation")
+      @ConditionalOnClass(AsyncRestTemplate.class)
+      static class AsyncRestTemplatePresent {} // 存在AsyncRestTemplate实例
+      @ConditionalOnClass(Ribbon.class)
+      static class RibbonPresent {} // 存在有Ribbon实例
+   }
+}
+
+
+2、
+package org.springframework.cloud.netflix.ribbon;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Collections;
+import java.util.Map;
+import com.netflix.client.config.IClientConfig;
+import com.netflix.loadbalancer.ILoadBalancer;
+import com.netflix.loadbalancer.Server;
+import org.springframework.cloud.client.DefaultServiceInstance;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerRequest;
+import org.springframework.util.Assert;
+import org.springframework.util.ReflectionUtils;
+import static org.springframework.cloud.netflix.ribbon
+.RibbonUtils.updateToSecureConnectionIfNeeded;
+public class RibbonLoadBalancerClient implements LoadBalancerClient {
+   private SpringClientFactory clientFactory; // Spring客户端工厂类，加载配置使用的
+   public RibbonLoadBalancerClient(SpringClientFactory clientFactory) {
+      this.clientFactory = clientFactory;
+   }
+   @Override
+   public URI reconstructURI(ServiceInstance instance, URI original) {
+      Assert.notNull(instance, "instance can not be null");
+      String serviceId = instance.getServiceId();// 服务的ID名称
+      RibbonLoadBalancerContext context = this.clientFactory
+            .getLoadBalancerContext(serviceId);
+      URI uri; // 根据服务实例拼凑出完整的访问路径（Nacos里面存在的是访问的基本信息）
+      Server server; // 服务实例数据存储
+      if (instance instanceof RibbonServer) { // 是否为Ribbon实例
+         RibbonServer ribbonServer = (RibbonServer) instance;
+         server = ribbonServer.getServer();
+         uri = updateToSecureConnectionIfNeeded(original, ribbonServer);
+      }
+      else { // 不是Ribbon实例
+         server = new Server(instance.getScheme(), instance.getHost(),
+               instance.getPort());
+         IClientConfig clientConfig = clientFactory.getClientConfig(serviceId);
+         ServerIntrospector serverIntrospector = serverIntrospector(serviceId);
+         uri = updateToSecureConnectionIfNeeded(original, clientConfig,
+               serverIntrospector, server);
+      }
+      return context.reconstructURIWithServer(server, uri);
+   }
+   @Override
+   public ServiceInstance choose(String serviceId) {
+      return choose(serviceId, null); // 根据服务名称获取一个指定的服务实例
+   }
+   public ServiceInstance choose(String serviceId, Object hint) { // 最终的实现
+      Server server = getServer(getLoadBalancer(serviceId), hint);
+      if (server == null) {
+         return null;
+      }
+      return new RibbonServer(serviceId, server, isSecure(server, serviceId),
+            serverIntrospector(serviceId).getMetadata(server));
+   }
+   @Override
+   public <T> T execute(String serviceId, LoadBalancerRequest<T> request)
+         throws IOException {
+      return execute(serviceId, request, null);
+   }
+   public <T> T execute(String serviceId, LoadBalancerRequest<T> request, Object hint)
+         throws IOException {
+      ILoadBalancer loadBalancer = getLoadBalancer(serviceId); // 获取接口实例
+      Server server = getServer(loadBalancer, hint); // 加载服务实例信息
+      if (server == null) {
+         throw new IllegalStateException("No instances available for " + serviceId);
+      }
+      RibbonServer ribbonServer = new RibbonServer(serviceId, server,
+            isSecure(server, serviceId),
+            serverIntrospector(serviceId).getMetadata(server));
+      return execute(serviceId, ribbonServer, request);
+   }
+   @Override
+   public <T> T execute(String serviceId, ServiceInstance serviceInstance,
+         LoadBalancerRequest<T> request) throws IOException {
+      Server server = null;
+      if (serviceInstance instanceof RibbonServer) {
+         server = ((RibbonServer) serviceInstance).getServer();
+      }
+      if (server == null) {
+         throw new IllegalStateException("No instances available for " + serviceId);
+      }
+      RibbonLoadBalancerContext context = this.clientFactory
+            .getLoadBalancerContext(serviceId); // Ribbon负载均衡上下文
+      RibbonStatsRecorder statsRecorder = new RibbonStatsRecorder(context, server);
+      try {
+         T returnVal = request.apply(serviceInstance); // 发送请求
+         statsRecorder.recordStats(returnVal); // 状态的记录 
+         return returnVal;
+      } catch (IOException ex) {
+         statsRecorder.recordStats(ex);
+         throw ex;
+      } catch (Exception ex) {
+         statsRecorder.recordStats(ex);
+         ReflectionUtils.rethrowRuntimeException(ex);
+      }
+      return null;
+   }
+   private ServerIntrospector serverIntrospector(String serviceId) {
+      ServerIntrospector serverIntrospector = this.clientFactory.getInstance(serviceId,
+            ServerIntrospector.class);
+      if (serverIntrospector == null) {
+         serverIntrospector = new DefaultServerIntrospector();
+      }
+      return serverIntrospector;
+   }
+   private boolean isSecure(Server server, String serviceId) { // 是否为安全调用
+      IClientConfig config = this.clientFactory.getClientConfig(serviceId); // 获取配置
+      ServerIntrospector serverIntrospector = serverIntrospector(serviceId);
+      return RibbonUtils.isSecure(config, serverIntrospector, server);
+   }
+   // Note: This method could be removed?
+   protected Server getServer(String serviceId) {
+      return getServer(getLoadBalancer(serviceId), null);
+   }
+   protected Server getServer(ILoadBalancer loadBalancer) {
+      return getServer(loadBalancer, null);
+   }
+   protected Server getServer(ILoadBalancer loadBalancer, Object hint) {
+      if (loadBalancer == null) { // 根据指定的负载均衡器来获取Server
+         return null;
+      }
+      // Use 'default' on a null hint, or just pass it on?
+      return loadBalancer.chooseServer(hint != null ? hint : "default");
+   }
+   protected ILoadBalancer getLoadBalancer(String serviceId) {
+      return this.clientFactory.getLoadBalancer(serviceId);
+   }
+   public static class RibbonServer implements ServiceInstance { // 定义Ribbon服务实例
+      private final String serviceId;
+      private final Server server;
+      private final boolean secure;
+      private Map<String, String> metadata;
+      public RibbonServer(String serviceId, Server server) {
+         this(serviceId, server, false, Collections.emptyMap());
+      }
+      public RibbonServer(String serviceId, Server server, boolean secure,
+            Map<String, String> metadata) {
+         this.serviceId = serviceId;
+         this.server = server;
+         this.secure = secure;
+         this.metadata = metadata;
+      }
+      @Override
+      public String getInstanceId() {
+         return this.server.getId();
+      }
+      @Override
+      public String getServiceId() {
+         return this.serviceId;
+      }
+      @Override
+      public String getHost() {
+         return this.server.getHost();
+      }
+      @Override
+      public int getPort() {
+         return this.server.getPort();
+      }
+      @Override
+      public boolean isSecure() {
+         return this.secure;
+      }
+      @Override
+      public URI getUri() {
+         return DefaultServiceInstance.getUri(this);
+      }
+      @Override
+      public Map<String, String> getMetadata() {
+         return this.metadata;
+      }
+      public Server getServer() {
+         return this.server;
+      }
+      @Override
+      public String getScheme() {
+         return this.server.getScheme();
+      }
+      @Override
+      public String toString() {
+         final StringBuilder sb = new StringBuilder("RibbonServer{");
+         sb.append("serviceId='").append(serviceId).append('\'');
+         sb.append(", server=").append(server);
+         sb.append(", secure=").append(secure);
+         sb.append(", metadata=").append(metadata);
+         sb.append('}');
+         return sb.toString();
+      }
+   }
+}
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

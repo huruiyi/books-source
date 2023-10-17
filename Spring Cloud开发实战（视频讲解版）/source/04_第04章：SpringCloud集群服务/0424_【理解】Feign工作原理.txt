@@ -1,0 +1,70 @@
+1、
+package feign;
+public abstract class Feign {
+  public static class Builder {
+    private final List<RequestInterceptor> requestInterceptors =
+        new ArrayList<RequestInterceptor>();  // 请求拦截器
+    private Logger.Level logLevel = Logger.Level.NONE; // 日志记录级别
+    private Contract contract = new Contract.Default(); // 规则解析
+    private Client client = new Client.Default(null, null); // 客户端
+    private Retryer retryer = new Retryer.Default(); // 重试机制
+    private Logger logger = new NoOpLogger(); // 日志
+    private Encoder encoder = new Encoder.Default(); // 编码器
+    private Decoder decoder = new Decoder.Default(); // 解码器
+    private QueryMapEncoder queryMapEncoder = new FieldQueryMapEncoder();
+    private ErrorDecoder errorDecoder = new ErrorDecoder.Default();
+    private Options options = new Options();
+    private InvocationHandlerFactory invocationHandlerFactory =
+        new InvocationHandlerFactory.Default(); // 动态代理工厂类
+    private boolean decode404;
+    private boolean closeAfterDecode = true;
+    private ExceptionPropagationPolicy propagationPolicy = NONE;
+}
+
+
+2、
+package feign;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.util.Map;
+public interface InvocationHandlerFactory {
+  InvocationHandler create(Target target, Map<Method, MethodHandler> dispatch);
+  interface MethodHandler {
+    Object invoke(Object[] argv) throws Throwable;
+  }
+  static final class Default implements InvocationHandlerFactory {
+    @Override
+    public InvocationHandler create(Target target, Map<Method, MethodHandler> dispatch) {
+      return new ReflectiveFeign.FeignInvocationHandler(target, dispatch);
+    }
+  }
+}
+
+
+3、
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+org.springframework.cloud.openfeign.ribbon.FeignRibbonClientAutoConfiguration,\
+org.springframework.cloud.openfeign.hateoas.FeignHalAutoConfiguration,\
+org.springframework.cloud.openfeign.FeignAutoConfiguration,\
+org.springframework.cloud.openfeign.encoding.FeignAcceptGzipEncodingAutoConfiguration,\
+org.springframework.cloud.openfeign.encoding.FeignContentGzipEncodingAutoConfiguration,\
+org.springframework.cloud.openfeign.loadbalancer.FeignLoadBalancerAutoConfiguration
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

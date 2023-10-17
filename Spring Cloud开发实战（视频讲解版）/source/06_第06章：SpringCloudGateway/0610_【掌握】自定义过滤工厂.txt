@@ -1,0 +1,75 @@
+1、
+package com.yootk.gateway.filter;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.AbstractNameValueGatewayFilterFactory;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+
+@Slf4j
+@Component
+public class LogGatewayFilterFactory extends AbstractNameValueGatewayFilterFactory {// 日志过滤工厂类
+    @Override
+    public GatewayFilter apply(NameValueConfig config) { // 过滤处理
+        return (exchange, chain) -> { // 编写具体的过滤实现
+            ServerHttpRequest request = exchange.getRequest().mutate().build();
+            ServerWebExchange webExchange = exchange.mutate().request(request).build();
+            log.info("配置参数：{}，{}", config.getName(), config.getValue()); // application.yml
+            log.info("请求路径：{}、请求模式：{}", request.getPath(), request.getMethod());
+            return chain.filter(webExchange); // 向下执行
+        };
+    }
+
+}
+
+
+2、
+server:
+  port: 9501 # 网关服务的端口
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: false # 取消默认路由配置，默认值就是false
+      routes: # 定义静态路由
+        - id: dept # 路由标记
+          uri: lb://dept.provider # 负载均衡调用
+          predicates: # 路由谓词工厂
+            - Path=/** # 匹配全部的路径
+          filters: # 配置过滤器
+            - RemoveRequestHeader=Request-Token-Muyan # 删除指定的头信息
+            - Log=muyan, yootk # 过滤器=NameValueConfig（name属性, value属性）
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

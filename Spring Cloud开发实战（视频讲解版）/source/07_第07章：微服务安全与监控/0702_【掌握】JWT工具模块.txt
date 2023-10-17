@@ -1,0 +1,452 @@
+1、
+implementation group: 'org.springframework.boot', name: 'spring-boot-configuration-processor', version: '2.5.5'
+compileOnly group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1'
+implementation group: 'commons-codec', name: 'commons-codec', version: '1.15'
+implementation group: 'io.jsonwebtoken', name: 'jjwt', version: '0.9.1'
+implementation group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.1'
+implementation group: 'com.sun.xml.bind', name: 'jaxb-impl', version: '2.3.0'
+implementation group: 'com.sun.xml.bind', name: 'jaxb-core', version: '2.3.0'
+
+
+
+2、
+ext.versions = [                // 定义全部的依赖库版本号
+    springboot           : '2.2.5.RELEASE',      // SpringBoot版本号
+    springcloud          : 'Hoxton.SR3', // SpringCloud版本号
+    alibabacloud         : '2.2.1.RELEASE', // SpringCloudAlibaba版本号
+    lombok               : '1.18.20', // Lombok版本号
+    junit                : '5.6.3', // 配置JUnit测试工具的版本编号
+    junitPlatformLauncher: '1.6.3',  // JUnit测试工具运行平台版本编号
+    mybatisPlus          : '3.4.3', // MyBatisPlus的版本号
+    mysql                : '8.0.25', // MySQL数据库驱动版本
+    druid                : '1.2.6', // Druid版本号
+    swagger              : '3.0.0', // Swagger版本号
+    nacos                : '2.0.2', // Nacos版本号
+    httpclient           : '4.5.13', // HttpClient版本号
+    feignHttpclient      : '11.6', // FeignHttpClient版本号
+    sentinel             : '1.8.2', // Sentinel版本号
+    caffeine             : '3.0.4', // Caffeine缓存组件版本号
+    micrometer           : '1.7.0', // Prometheus相关监控依赖，与服务部署的版本号相同
+    servlet              : '4.0.1', // Servlet的依赖库
+    commonsCodec         : '1.15', // codec依赖库
+    jjwt                 : '0.9.1', // jwt依赖库
+    jaxb                 : '2.3.0', // JAXB依赖库
+]
+ext.libraries = [            // 依赖库引入配置
+     'spring-boot-gradle-plugin'        :
+             "org.springframework.boot:spring-boot-gradle-plugin:${versions.springboot}",
+     'spring-cloud-dependencies'        :
+             "org.springframework.cloud:spring-cloud-dependencies:${versions.springcloud}",
+     'spring-cloud-alibaba-dependencies':
+             "com.alibaba.cloud:spring-cloud-alibaba-dependencies:${versions.alibabacloud}",
+     // 以下的配置为与项目用例测试有关的依赖
+     'junit-jupiter-api'                :
+             "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
+     'junit-vintage-engine'             :
+             "org.junit.vintage:junit-vintage-engine:${versions.junit}",
+     'junit-jupiter-engine'             :
+             "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+     'junit-platform-launcher'          :
+             "org.junit.platform:junit-platform-launcher:${versions.junitPlatformLauncher}",
+     'junit-platform-engine'            :
+             "org.junit.platform:junit-platform-engine:${versions.junitPlatformLauncher}",
+     'junit-jupiter-params'             :
+             "org.junit.jupiter:junit-jupiter-params:${versions.junit}",
+     'junit-bom'                        : "org.junit:junit-bom:${versions.junit}",
+     'junit-platform-commons'           :
+             "org.junit.platform:junit-platform-commons:${versions.junitPlatformLauncher}",
+     // 以下的配置为Lombok组件有关的依赖
+     'lombok'                           : "org.projectlombok:lombok:${versions.lombok}",
+     // 以下的配置为数据库开发有关的依赖
+     'mybatis-plus-boot-starter'        : "com.baomidou:mybatis-plus-boot-starter:${versions.mybatisPlus}",
+     'mysql-connector-java'             : "mysql:mysql-connector-java:${versions.mysql}",
+     'druid'                            : "com.alibaba:druid:${versions.druid}",
+     // 以下的配置为Swagger有关的依赖库
+    'springfox-boot-starter'            : "io.springfox:springfox-boot-starter:${versions.swagger}",
+     // 以下的配置为Nacos有关的依赖库
+    'nacos-client'                      : "com.alibaba.nacos:nacos-client:${versions.nacos}",
+    // 以下的配置为Feign与HttpClient有关的依赖库
+    'httpclient'                        : "org.apache.httpcomponents:httpclient:${versions.httpclient}",
+    'feign-httpclient'                  : "io.github.openfeign:feign-httpclient:${versions.feignHttpclient}",
+    // 以下的配置为Sentinel有关的组件依赖
+    'sentinel-datasource-nacos'         : "com.alibaba.csp:sentinel-datasource-nacos:${versions.sentinel}",
+    // 以下的配置为LoadBalancer所需要的Caffeine组件有关依赖
+    'caffeine'                          : "com.github.ben-manes.caffeine:caffeine:${versions.caffeine}",
+    // 以下的配置为Prometheus服务整合
+    'micrometer-registry-prometheus': "io.micrometer:micrometer-registry-prometheus:${versions.micrometer}",
+    'micrometer-core': "io.micrometer:micrometer-core:${versions.micrometer}",
+    // 以下的配置为JWT的服务整合
+    'servlet-api'                       : "javax.servlet:javax.servlet-api:${versions.servlet}",
+    'commons-codec'                     : "commons-codec:commons-codec:${versions.commonsCodec}",
+    'jjwt'                              : "io.jsonwebtoken:jjwt:${versions.jjwt}",
+    'jaxb-api'                          : "javax.xml.bind:jaxb-api:${versions.jaxb}",
+    'jaxb-impl'                         : "com.sun.xml.bind:jaxb-impl:${versions.jaxb}",
+    'jaxb-core'                         : "com.sun.xml.bind:jaxb-core:${versions.jaxb}",
+]
+
+
+3、
+project(":yootk-starter-jwt") { // JWT的实现组件
+    dependencies {
+        annotationProcessor('org.springframework.boot:spring-boot-configuration-processor')
+        implementation(libraries.'servlet-api')
+        implementation(libraries.'commons-codec')
+        // 以下的组件会被其他的模块继续引用，所以必须将其的编译范围配置为compile
+        compile(libraries.'jjwt')
+        compile(libraries.'jaxb-api')
+        compile(libraries.'jaxb-impl')
+        compile(libraries.'jaxb-core')
+    }
+}
+
+4、
+jar { enabled = true} // 允许打包为jar文件
+bootJar { enabled = false } // 不允许打包为Boot执行文件
+javadocJar { enabled = false } // 不需要打包为jar文件
+javadocTask { enabled = false } // 不需要打包为doc文件
+
+5、
+package com.yootk.jwt.code;
+
+import javax.servlet.http.HttpServletResponse;
+
+public enum JWTResponseCode { // 定义为一个枚举类
+    SUCCESS_CODE(HttpServletResponse.SC_OK, "Token数据正确，服务正常访问！"),
+    TOKEN_TIMEOUT_CODE(HttpServletResponse.SC_BAD_REQUEST, "Token信息已经失效，需要重新申请！"),
+    NO_AUTH_CODE(HttpServletResponse.SC_NOT_FOUND, "没有找到匹配的Token信息，无法进行服务访问！");
+    private int code; // 响应的代码
+    private String message; // 响应信息
+    private JWTResponseCode(int code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+    public String toString() {  // 直接将数据以JSON的形式返回
+        return "{\"code\":" + this.code + ",\"message\":" + this.message + "}";
+    }
+}
+
+
+6、
+package com.yootk.jwt.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+@Data // Lombok直接生成的所有代码
+@ConfigurationProperties(prefix = "yootk.security.config.jwt") // 配置项的前缀
+public class JWTConfigProperties { // JWT配置类
+    private String sign; // 保存签名信息
+    private String issuer; // 证书签发者
+    private String secret; // 加密的密钥
+    private long expire; // 失效时间
+}
+
+
+7、
+package com.yootk.jwt.service;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
+
+import javax.crypto.SecretKey;
+import java.util.Map;
+
+public interface ITokenService { // 创建一个JWT的操作接口
+    public SecretKey generalKey(); // 获取当前JWT数据的加密KEY
+    // 创建Token的数据内容，同时要求保存用户的id以及所需要的附加数据
+    public String createToken(String id, Map<String, Object> subject);
+    public Jws<Claims> parseToken(String token) throws JwtException; // 解析Token数据
+    public boolean verifyToken(String token); // 验证Token有效性
+    public String refreshToken(String token); // 刷新Token内容
+}
+
+
+8、
+package com.yootk.jwt.service.impl;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yootk.jwt.config.JWTConfigProperties;
+import com.yootk.jwt.service.ITokenService;
+import io.jsonwebtoken.*;
+import org.apache.commons.codec.binary.Base64;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+// 此时的组件中的代码需要被其他的模块去引用，所以未必会与扫描包相同
+public class TokenServiceImpl implements ITokenService {
+    @Autowired // SpringBoot容器启动时会自动提供Jacks实例
+    private ObjectMapper objectMapper; // Jackson的数据处理类对象
+    @Autowired
+    private JWTConfigProperties jwtConfigProperties; // 获取JWT的相关配置属性
+    @Value("${spring.application.name}") // 通过SpEL进行配置注入
+    private String applicationName; // 应用名称
+    private SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256; // 签名算法
+    @Override
+    public SecretKey generalKey() {
+        byte [] encodeKey = Base64.decodeBase64(Base64.encodeBase64(this.jwtConfigProperties.getSecret().getBytes()));
+        SecretKey key = new SecretKeySpec(encodeKey, 0, encodeKey.length, "AES"); // 获取加密KEY
+        return key;
+    }
+
+    @Override
+    public String createToken(String id, Map<String, Object> subject) {
+        // 使用JWT数据结构进行开发，目的之一就是不需要进行JWT数据的分布式存储，所以所谓的缓存组件、数据库都用不到
+        // 所有的Token都存在有保存时效的问题，所以就需要通过当前时间来进行计算
+        Date nowDate = new Date(); // 获取当前的日期时间
+        Date expireDate = new Date(nowDate.getTime() + this.jwtConfigProperties.getExpire() * 1000); // 证书过期时间
+        Map<String, Object> cliams = new HashMap<>(); // 保存所有附加数据
+        cliams.put("site", "www.yootk.com"); // 视频下载地址，顶部有一个下载资源
+        cliams.put("msg", "世界上爆可爱的老师 —— 爆可爱的小李老师"); // 随便添加内容
+        cliams.put("nice", "Good Good Good");
+        Map<String, Object> headers = new HashMap<>(); // 保存头信息
+        headers.put("author", "李兴华"); // 作者，也可以通过配置处理
+        // 后续由于很多的模块都会引用此组件，所以为了后续的安全，最佳的做法就是设置一个模块名称的信息
+        headers.put("module", this.applicationName);
+        JwtBuilder builder = null;
+        try {
+            builder = Jwts.builder()    // 进行JWTBuilder对象实例化
+                    .setClaims(cliams) // 保存附加的数据内容
+                    .setHeader(headers) // 保存头信息
+                    .setId(id)// 保存ID信息
+                    .setIssuedAt(nowDate) // 签发时间
+                    .setIssuer(this.jwtConfigProperties.getIssuer()) // 设置签发者
+                    .setSubject(this.objectMapper.writeValueAsString(subject)) // 所要传递的数据转为JSON
+                    .signWith(this.signatureAlgorithm, this.generalKey()) // 获取签名算法
+                    .setExpiration(expireDate); // 配置失效时间
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return builder.compact(); // 创建Token
+    }
+
+    @Override
+    public Jws<Claims> parseToken(String token) throws JwtException {
+        if (this.verifyToken(token)) {  // 只有正确的时候再进行Token解析
+            Jws<Claims> claims = Jwts.parser().setSigningKey(this.generalKey()).parseClaimsJws(token);
+            return claims;
+        }
+        return null; // 解析失败返回null
+    }
+
+    @Override
+    public boolean verifyToken(String token) {
+        try {
+            Jwts.parser().setSigningKey(this.generalKey()).parseClaimsJws(token).getBody();
+            return true; // 没有异常就返回true
+        } catch (Exception e) {}
+        return false;
+    }
+
+    @Override
+    public String refreshToken(String token) {
+        if (this.verifyToken(token)) {
+            Jws<Claims> jws = this.parseToken(token); // 解析Token数据
+            return this.createToken(jws.getBody().getId(), this.objectMapper.readValue(jws.getBody().getSubject(), Map.class));
+        }
+        return null;
+    }
+}
+
+
+9、
+package com.yootk.jwt.service;
+
+public interface IEncryptService { // 密码加密
+    public String getEncryptPassword(String password); // 得到一个加密后的密码
+}
+
+10、
+package com.yootk.jwt.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+@Data
+@ConfigurationProperties(prefix = "yootk.security.config.password.encrypt") // 配置前缀
+public class EncryptConfigProperties { // 加密配置属性
+    private Integer repeat; // 定义重复的次数
+    private String salt; // 加密的盐值
+}
+
+
+11、
+package com.yootk.jwt.service.impl;
+
+import com.yootk.jwt.config.EncryptConfigProperties;
+import com.yootk.jwt.service.IEncryptService;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+
+public class EncryptServiceImpl implements IEncryptService {
+    @Autowired
+    private EncryptConfigProperties encryptConfigProperties; // 属性配置
+    private static MessageDigest MD5_DIGEST; // MD5加密处理
+    private static final Base64.Encoder BASE64_ENCODER = Base64.getEncoder(); // 加密器
+    static {    // 初始化操作
+        try {
+            MD5_DIGEST = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+    }
+    @Override
+    public String getEncryptPassword(String password) {
+        String saltPassword = "{" + this.encryptConfigProperties.getSalt() + "}" + password;
+        for (int x = 0 ; x < this.encryptConfigProperties.getRepeat(); x ++) {
+            saltPassword = BASE64_ENCODER.encodeToString(MD5_DIGEST.digest(saltPassword.getBytes()));
+        }
+        return saltPassword;
+    }
+}
+
+12、
+package com.yootk.jwt.autoconfig;
+
+import com.yootk.jwt.config.EncryptConfigProperties;
+import com.yootk.jwt.config.JWTConfigProperties;
+import com.yootk.jwt.service.IEncryptService;
+import com.yootk.jwt.service.ITokenService;
+import com.yootk.jwt.service.impl.EncryptServiceImpl;
+import com.yootk.jwt.service.impl.TokenServiceImpl;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+@EnableConfigurationProperties({JWTConfigProperties.class, EncryptConfigProperties.class}) // 配置注入属性
+public class JWTAutoConfiguration {
+    @Bean("tokenService")
+    public ITokenService getTokenServiceBean() {
+        return new TokenServiceImpl();
+    }
+    @Bean("encryptService")
+    public IEncryptService getEncryptServiceBean() {
+        return new EncryptServiceImpl();
+    }
+}
+
+13、
+yootk:
+  security:
+    config:
+      jwt:
+        sign: muyan
+        issuer: MuyanYootk
+        secret: www.yootk.com
+        expire: 100 # 单位：秒
+      password:
+        encrypt:
+          repeat: 5
+          salt: www.yootk.com
+
+spring:
+  application:
+    name: JWT-TEST
+
+14、
+package com.yootk.jwt;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StartJWTConfiguration {
+    public static void main(String[] args) {
+        SpringApplication.run(StartJWTConfiguration.class, args);
+    }
+}
+
+15、
+package com.yootk.test;
+
+import com.yootk.jwt.StartJWTConfiguration;
+import com.yootk.jwt.service.ITokenService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwsHeader;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.web.WebAppConfiguration;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+@ExtendWith(SpringExtension.class)
+@WebAppConfiguration
+@SpringBootTest(classes = StartJWTConfiguration.class) // 随便写的测试类
+public class TestTokenService { // 代码测试
+    @Autowired
+    private ITokenService tokenService;
+    private String jwt = "eyJhdXRob3IiOiLmnY7lhbTljY4iLCJtb2R1bGUiOiJKV1QtVEVTVCIsImFsZyI6IkhTMjU2In0.eyJtc2ciOiLkuJbnlYzkuIrniIblj6_niLHnmoTogIHluIgg4oCU4oCUIOeIhuWPr-eIseeahOWwj-adjuiAgeW4iCIsInN1YiI6IntcInJpZHNcIjpcIlVTRVI7QURNSU47REVQVDtFTVA7Uk9MRVwiLFwibmFtZVwiOlwi5rKQ6KiA56eR5oqAIOKAlOKAlCDmnY7lhbTljY5cIixcIm1pZFwiOlwibXV5YW5cIn0iLCJzaXRlIjoid3d3Lnlvb3RrLmNvbSIsImlzcyI6Ik11eWFuWW9vdGsiLCJleHAiOjE2MzM2NzE3NjcsImlhdCI6MTYzMzU3MTc2NywibmljZSI6Ikdvb2QgR29vZCBHb29kIiwianRpIjoieW9vdGstMDgwNGI3NDQtNTBjZC00NjI2LTgzNmEtNjA1MmFiZWMyYzQ4In0.O71QGGPtWYwL7Tyhx8iOLQFAWc1DmVlAS4i0N99OJJk"; // 测试解析使用的
+    @Test
+    public void testCreateToken() {
+        Map<String, Object> map = new HashMap<>(); // 测试生成
+        map.put("mid", "muyan");
+        map.put("name", "沐言科技 —— 李兴华");
+        map.put("rids", "USER;ADMIN;DEPT;EMP;ROLE"); // 用户角色信息
+        String id = "yootk-" + UUID.randomUUID(); // 随意生成一个JWT-ID数据
+        System.out.println(this.tokenService.createToken(id, map));
+    }
+    @Test
+    public void testParseToken() {  // 解析Token数据内容
+        Jws<Claims> jws = this.tokenService.parseToken(jwt);
+        System.out.println("JWT签名数据：" + jws.getSignature()); // 获取签名数据
+        JwsHeader headers = jws.getHeader(); // 获取头信息
+        headers.forEach((headerName, headerValue) -> {
+            System.out.println("【JWT头信息】" + headerName + " = " + headerValue);
+        });
+        Claims claims = jws.getBody();
+        claims.forEach((bodyName, bodyValue) -> {
+            System.out.println("【JWT数据】" + bodyName + " = " + bodyValue);
+        });
+    } 
+    @Test
+    public void testVerifyJWT() {
+        System.out.println("【JWT数据验证】" + this.tokenService.verifyToken(jwt));
+    }
+    @Test
+    public void testRefreshJWT() {
+        System.out.println("【JWT数据刷新】" + this.tokenService.refreshToken(jwt));
+    }
+}
+
+16、
+package com.yootk.test;
+
+import com.yootk.jwt.StartJWTConfiguration;
+import com.yootk.jwt.service.IEncryptService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.web.WebAppConfiguration;
+
+@ExtendWith(SpringExtension.class)
+@WebAppConfiguration
+@SpringBootTest(classes = StartJWTConfiguration.class) // 随便写的测试类
+public class TestEncryptService {
+    @Autowired
+    private IEncryptService encryptService;
+    @Test
+    public void testCreatePassword() {
+        System.out.println(this.encryptService.getEncryptPassword("hello"));
+    }
+}
+
+
+

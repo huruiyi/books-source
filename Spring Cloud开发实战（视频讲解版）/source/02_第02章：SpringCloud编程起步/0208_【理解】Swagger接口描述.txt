@@ -1,0 +1,80 @@
+1、
+// https://mvnrepository.com/artifact/io.springfox/springfox-boot-starter
+implementation group: 'io.springfox', name: 'springfox-boot-starter', version: '3.0.0'
+
+
+2、
+ext.versions = [                // 定义全部的依赖库版本号
+    springboot           : '2.2.5.RELEASE',      // SpringBoot版本号
+    springcloud          : 'Hoxton.SR3', // SpringCloud版本号
+    alibabacloud         : '2.2.1.RELEASE', // SpringCloudAlibaba版本号
+    lombok               : '1.18.20', // Lombok版本号
+    junit                : '5.6.3', // 配置JUnit测试工具的版本编号
+    junitPlatformLauncher: '1.6.3',  // JUnit测试工具运行平台版本编号
+    mybatisPlus          : '3.4.3', // MyBatisPlus的版本号
+    mysql                : '8.0.25', // MySQL数据库驱动版本
+    druid                : '1.2.6', // Druid版本号
+    swagger              : '3.0.0', // Swagger版本号
+]
+ext.libraries = [            // 依赖库引入配置
+     'spring-boot-gradle-plugin'        :
+             "org.springframework.boot:spring-boot-gradle-plugin:${versions.springboot}",
+     'spring-cloud-dependencies'        :
+             "org.springframework.cloud:spring-cloud-dependencies:${versions.springcloud}",
+     'spring-cloud-alibaba-dependencies':
+             "com.alibaba.cloud:spring-cloud-alibaba-dependencies:${versions.alibabacloud}",
+     // 以下的配置为与项目用例测试有关的依赖
+     'junit-jupiter-api'                :
+             "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
+     'junit-vintage-engine'             :
+             "org.junit.vintage:junit-vintage-engine:${versions.junit}",
+     'junit-jupiter-engine'             :
+             "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+     'junit-platform-launcher'          :
+             "org.junit.platform:junit-platform-launcher:${versions.junitPlatformLauncher}",
+     'junit-platform-engine'            :
+             "org.junit.platform:junit-platform-engine:${versions.junitPlatformLauncher}",
+     'junit-jupiter-params'             :
+             "org.junit.jupiter:junit-jupiter-params:${versions.junit}",
+     'junit-bom'                        : "org.junit:junit-bom:${versions.junit}",
+     'junit-platform-commons'           :
+             "org.junit.platform:junit-platform-commons:${versions.junitPlatformLauncher}",
+     // 以下的配置为Lombok组件有关的依赖
+     'lombok'                           : "org.projectlombok:lombok:${versions.lombok}",
+     // 以下的配置为数据库开发有关的依赖
+     'mybatis-plus-boot-starter'        : "com.baomidou:mybatis-plus-boot-starter:${versions.mybatisPlus}",
+     'mysql-connector-java'             : "mysql:mysql-connector-java:${versions.mysql}",
+     'druid'                            : "com.alibaba:druid:${versions.druid}",
+     // 以下的配置为Swagger有关的依赖库
+    'springfox-boot-starter'            : "io.springfox:springfox-boot-starter:${versions.swagger}"
+]
+
+
+3、
+project(":provider-dept-8001") {    // 部门微服务
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation(libraries.'mybatis-plus-boot-starter')
+        implementation(libraries.'mysql-connector-java')
+        implementation(libraries.'druid')
+        implementation(libraries.'springfox-boot-starter')
+    }
+}
+
+4、
+http://provider-dept-8001:8001/swagger-ui/
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

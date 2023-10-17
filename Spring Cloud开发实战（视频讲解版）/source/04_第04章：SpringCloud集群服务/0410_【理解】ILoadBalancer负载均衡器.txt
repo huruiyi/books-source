@@ -1,0 +1,62 @@
+1、
+package com.yootk.test;
+
+import com.netflix.loadbalancer.LoadBalancerStats;
+import com.netflix.loadbalancer.Server;
+import com.netflix.loadbalancer.ZoneAwareLoadBalancer;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class TestZoneAwareLoadBalancer {
+    public static void main(String[] args) {
+        List<Server> serverList = new ArrayList<>();// 是直接保存Server集合
+        serverList.add(createServer("muyan", "muyan.provider-dept", 8001));
+        serverList.add(createServer("muyan", "muyan.provider-dept", 8002));
+        serverList.add(createServer("yootk", "yootk.provider-dept", 8001));
+        // 设置完成了区域数据之后，下面就需要进行负载均衡算法的配置
+        ZoneAwareLoadBalancer loadBalancer = new ZoneAwareLoadBalancer();// 区域负载均衡
+        loadBalancer.addServers(serverList); // 添加服务集合
+        LoadBalancerStats stats = loadBalancer.getLoadBalancerStats(); // 获取统计数据
+        stats.updateServerList(serverList); // 服务列表更新
+        stats.getServerStats().keySet().forEach(currentServer -> {
+            if (currentServer.getZone().equals("yootk")) {  // 区域算法
+                loadBalancer.markServerDown(currentServer); // 服务下线
+            }
+        });
+        for (int x = 0; x < loadBalancer.getServerCount(true); x++) {
+            System.out.println(loadBalancer.chooseServer(null)); // 服务筛选
+        }
+    }
+
+    public static Server createServer(String zone, String url, int index) {
+        Server server = new Server(url, index); // 创建实例
+        server.setZone(zone); // 设置区域
+        return server;
+    }
+}
+
+
+2、
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

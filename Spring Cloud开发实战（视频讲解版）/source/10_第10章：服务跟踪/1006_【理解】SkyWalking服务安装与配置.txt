@@ -1,0 +1,42 @@
+1、
+elk-server:9100/?auth_user=elastic&auth_password=elastic
+
+2、
+vi /etc/hosts
+192.168.190.161 elk-server
+192.168.190.162 skywalking-server
+
+3、
+mv /usr/local/apache-skywalking-apm-bin-es7/  /usr/local/skywalking
+
+
+4、
+vi /usr/local/skywalking/config/application.yml 
+
+storage:
+  selector: ${SW_STORAGE:elasticsearch7}
+  elasticsearch7:
+    nameSpace: ${SW_NAMESPACE:""}
+    clusterNodes: ${SW_STORAGE_ES_CLUSTER_NODES:elk-server:9200}
+    user: ${SW_ES_USER:"elastic"}
+    password: ${SW_ES_PASSWORD:"elastic"}
+
+
+5、
+/usr/local/skywalking/bin/startup.sh 
+
+6、
+firewall-cmd --zone=public --add-port=8080/tcp --permanent
+firewall-cmd --zone=public --add-port=11800/tcp --permanent
+firewall-cmd --zone=public --add-port=12800/tcp --permanent
+firewall-cmd --reload
+
+7、
+192.168.190.161	elk-server
+192.168.190.162	skywalking-server
+
+8、
+http://skywalking-server:8080/
+
+9、
+http://skywalking-server:8080/

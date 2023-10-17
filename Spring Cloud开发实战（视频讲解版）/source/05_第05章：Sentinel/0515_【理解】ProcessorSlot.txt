@@ -1,0 +1,104 @@
+1、
+package com.alibaba.csp.sentinel;
+public class CtSph implements Sph {
+    private static final Object[] OBJECTS0 = new Object[0];
+// 这个类会维护有一个Map集合，这个Map集合对应的KEY类型是ResourceWrapper（描述的是资源名称）
+// 而Map集合中的VALUE是一个ProcessorSlotChain抽象类的实例
+    private static volatile Map<ResourceWrapper, ProcessorSlotChain> chainMap
+        = new HashMap<ResourceWrapper, ProcessorSlotChain>();
+    private static final Object LOCK = new Object();
+｝
+
+
+2、
+package com.alibaba.csp.sentinel.slotchain;
+public abstract class ProcessorSlotChain extends AbstractLinkedProcessorSlot<Object> {
+    /**
+     * 追加一个处理类到SlotChain头部节点.
+     * @param protocolProcessor processor to be added.
+     */
+    public abstract void addFirst(AbstractLinkedProcessorSlot<?> protocolProcessor);
+    /**
+     * 追加一个处理类到SlotChain尾部节点.
+     * @param protocolProcessor processor to be added.
+     */
+    public abstract void addLast(AbstractLinkedProcessorSlot<?> protocolProcessor);
+}
+
+
+3、
+ProcessorSlot<Object> lookProcessChain(ResourceWrapper resourceWrapper) {
+    ProcessorSlotChain chain = chainMap.get(resourceWrapper);
+    if (chain == null) {
+        synchronized (LOCK) {
+            chain = chainMap.get(resourceWrapper);
+            if (chain == null) {
+                // Entry size limit.
+                if (chainMap.size() >= Constants.MAX_SLOT_CHAIN_SIZE) {
+                    return null;
+                }
+                chain = SlotChainProvider.newSlotChain();
+                Map<ResourceWrapper, ProcessorSlotChain> newMap = new HashMap<ResourceWrapper, ProcessorSlotChain>( chainMap.size() + 1);
+                newMap.putAll(chainMap);
+                newMap.put(resourceWrapper, chain);
+                chainMap = newMap;
+            }
+        }
+    }
+    return chain;
+}
+
+
+4、
+public static ProcessorSlotChain newSlotChain() {
+    if (slotChainBuilder != null) {
+        return slotChainBuilder.build();
+    }
+    // Resolve the slot chain builder SPI.
+    slotChainBuilder = SpiLoader.loadFirstInstanceOrDefault(SlotChainBuilder.class, DefaultSlotChainBuilder.class);
+    if (slotChainBuilder == null) {
+        // Should not go through here.
+        RecordLog.warn("[SlotChainProvider] Wrong state when resolving slot chain builder, using default");
+        slotChainBuilder = new DefaultSlotChainBuilder();
+    } else {
+        RecordLog.info("[SlotChainProvider] Global slot chain builder resolved: "
+            + slotChainBuilder.getClass().getCanonicalName());
+    }
+    return slotChainBuilder.build();
+}
+
+
+5、
+package com.alibaba.csp.sentinel.slotchain;
+public interface SlotChainBuilder {
+    ProcessorSlotChain build();
+}
+package com.alibaba.csp.sentinel.slots;
+public class DefaultSlotChainBuilder implements SlotChainBuilder {
+    @Override
+    public ProcessorSlotChain build() {
+        ProcessorSlotChain chain = new DefaultProcessorSlotChain();
+        chain.addLast(new NodeSelectorSlot());
+        chain.addLast(new ClusterBuilderSlot());
+        chain.addLast(new LogSlot());
+        chain.addLast(new StatisticSlot());
+        chain.addLast(new AuthoritySlot());
+        chain.addLast(new SystemSlot());
+        chain.addLast(new FlowSlot());
+        chain.addLast(new DegradeSlot());
+        return chain;
+    }
+}
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

@@ -1,0 +1,96 @@
+1、
+package com.yootk.consumer.config;
+
+import com.yootk.consumer.interceptor.MicroServiceHTTPInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Collections;
+
+@Configuration
+public class RestTemplateConfig { // 实现RestTemplate的相关配置
+    @Autowired
+    private MicroServiceHTTPInterceptor interceptor; // 注入拦截器
+    @LoadBalanced
+    @Bean // 向Spring容器之中进行Bean注册
+    public RestTemplate getRestTemplate() {
+        RestTemplate template = new RestTemplate();
+        template.setInterceptors(Collections.singletonList(this.interceptor));
+        return template;
+    }
+}
+
+
+2、
+package com.yootk.consumer.action;
+
+import com.yootk.common.dto.DeptDTO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/consumer/dept/*") // 两个不同的服务路径
+public class DeptConsumerAction { // 消费端Action
+    // 定义出要访问的部门微服务所需要的核心路径前缀，随后在具体请求的时候添加传递的参数
+    public static final String DEPT_ADD_URL =
+            "http://dept.provider/provider/dept/add";
+    public static final String DEPT_GET_URL =
+            "http://dept.provider/provider/dept/get/"; // id是自己变更的
+    public static final String DEPT_LIST_URL =
+            "http://dept.provider/provider/dept/list";
+    public static final String DEPT_SPLIT_URL =
+            "http://dept.provider/provider/dept/split";
+    @Autowired
+    private RestTemplate restTemplate; // 再见最后一面
+    @GetMapping("add") // 消费端接口名称
+    public Object addDept(DeptDTO dto) {
+        // 需要将当前的DTO对象传递到部门微服务之中，所以此时就要通过RestTemplate对象处理
+        return this.restTemplate.postForObject(DEPT_ADD_URL, dto, Boolean.class);
+    }
+    @GetMapping("get")
+    public Object get(Long deptno) {
+        return this.restTemplate.getForObject(DEPT_GET_URL + deptno, DeptDTO.class);
+    }
+    @GetMapping("list")
+    public Object list() {
+        return this.restTemplate.getForObject(DEPT_LIST_URL, List.class);
+    }
+    @GetMapping("split")
+    public Object split(int cp, int ls, String col, String kw) {
+        return this.restTemplate.getForObject(DEPT_SPLIT_URL + "?cp=" + cp + "&ls=" + ls + "&col=" + col + "&kw=" + kw, Map.class);
+    }
+}
+
+
+3、
+ribbon: # Ribbon相关配置
+  eager-load: # 采用饿汉式进行加载
+    clients: dept.provider # 设置服务名称，使用“,”分割
+    enabled: true # 启用饿汉式
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

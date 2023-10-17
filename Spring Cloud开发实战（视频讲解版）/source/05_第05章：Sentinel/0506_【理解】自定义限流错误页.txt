@@ -1,0 +1,54 @@
+1、
+package com.yootk.provider.action;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.servlet.http.HttpServletResponse;
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/errors/*") // 父路径
+public class BlockAction {
+    @RequestMapping("block_handler")
+    public Object globalBlockHandler() {
+        Map<String, Object> result = new HashMap<>(); // 保存错误信息
+        result.put("status", HttpServletResponse.SC_BAD_REQUEST); // 设置状态码
+        result.put("message", "Blocked by Sentinel (flow limiting)");
+        return result;
+    }
+}
+
+
+2、
+spring:
+  application: # 配置应用信息
+    name: dept.provider # 是微服务的名称
+  cloud: # Cloud配置
+    sentinel: # 监控配置
+      transport: # 传输配置
+        port: 8719 # Sentinel组件启用之后默认会启动一个8719端口
+        dashboard: sentinel-server:8888 # 控制台地址
+      block-page: /errors/block_handler # 阻断页
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

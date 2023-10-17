@@ -1,0 +1,80 @@
+1、
+yootk:
+  message:
+    flag: dev
+    content: 沐言科技：www.yootk.com
+yootk:
+  message:
+    flag: test
+    content: 李兴华高薪就业编程训练营：edu.yootk.com
+yootk:
+  message:
+    flag: prod
+    content: 课程资源下载：www.yootk.com/resources
+
+
+2、
+spring: # Spring配置项
+  application:
+    name: message.provider # 应用名称
+  profiles:
+    active: dev # 使用的profile配置项
+  cloud: # SpringCloud配置项
+    nacos: # Nacos注册中心的配置
+      config: # gRPC通讯配置
+        server-addr: nacos-server:8848 # Nacos地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        file-extension: yml # 配置文件类型
+      discovery: # 发现服务
+        weight: 80
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        metadata: # 根据自身的需要配置元数据
+          version: 1.0 # 自定义元数据项
+          company: 沐言科技 # 自定义元数据项
+          url: www.yootk.com # 自定义元数据项
+          author: 李兴华（爆可爱的小李老师） # 自定义元数据项
+
+
+3、
+project(":provider-message-8201") {    // 消息微服务
+    dependencies {
+        implementation("org.springframework.boot:spring-boot-starter-web")
+        implementation(libraries.'spring-boot-admin-starter-client')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

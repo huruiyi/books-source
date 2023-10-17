@@ -1,0 +1,480 @@
+1、
+project(":token-server-8201") {    // 部门微服务
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation(project(":yootk-starter-jwt")) // 导入JWT子模块
+        implementation(libraries.'mybatis-plus-boot-starter')
+        implementation(libraries.'mysql-connector-java')
+        implementation(libraries.'druid')
+        implementation(libraries.'springfox-boot-starter')
+        implementation('org.springframework.boot:spring-boot-starter-security')
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+
+
+2、
+
+DROP DATABASE IF EXISTS token8201;
+CREATE DATABASE token8201 CHARACTER SET UTF8 ;
+USE token8201 ;
+CREATE TABLE member(
+   mid			VARCHAR(50) NOT NULL,
+   name			VARCHAR(30),
+   password		VARCHAR(32),
+   locked		INT,
+   dbname		VARCHAR(50),
+   CONSTRAINT pk_mid PRIMARY KEY (mid)
+) engine='innodb';
+CREATE TABLE role(
+   rid			VARCHAR(50) ,
+   title			VARCHAR(200) ,
+   dbname		VARCHAR(50),
+   CONSTRAINT pk_rid PRIMARY KEY(rid)
+) engine='innodb' ;
+CREATE TABLE action(
+   actid			VARCHAR(50) ,
+   title			VARCHAR(200) ,
+   rid			VARCHAR(50) ,
+   dbname		VARCHAR(50),
+   CONSTRAINT pk_actid PRIMARY KEY(actid)
+) engine='innodb' ;
+CREATE TABLE member_role(
+   mid			VARCHAR(50) ,
+   rid			VARCHAR(50) ,
+   dbname		VARCHAR(50)
+) engine='innodb' ;
+-- 1表示活跃、0表示锁定，用户密码铭文：hello
+INSERT INTO member(mid, name, password, locked, dbname) VALUES
+	 ('admin', '管理员', 'Wx7vJ71XD3TgJg5uiETnKA==', 0, database()) ;
+INSERT INTO member(mid, name, password, locked, dbname) VALUES
+	 ('yootk', '用户', 'Wx7vJ71XD3TgJg5uiETnKA==', 0, database()) ;
+INSERT INTO member(mid, name, password, locked, dbname) VALUES
+	 ('mermaid', '美人鱼', 'Wx7vJ71XD3TgJg5uiETnKA==', 1, database()) ;
+-- 定义角色信息
+INSERT INTO role(rid, title, dbname) VALUES ('member', '用户管理', database()) ;
+INSERT INTO role(rid, title, dbname) VALUES ('dept', '部门管理', database()) ;
+INSERT INTO role(rid, title, dbname) VALUES ('emp', '雇员管理', database()) ;
+-- 定义权限信息
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('member:add', '创建用户', 'member', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('member:edit', '编辑用户', 'member', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('member:delete', '删除用户', 'member', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('member:list', '用户列表', 'member', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('dept:add', '创建部门', 'dept', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('dept:edit', '编辑部门', 'dept', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('dept:delete', '删除部门', 'dept', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('dept:list', '部门列表', 'dept', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('emp:add', '增加雇员', 'emp', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('emp:edit', '编辑雇员', 'emp', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('emp:delete', '删除雇员', 'emp', database()) ;
+INSERT INTO action(actid, title, rid, dbname) VALUES 
+	 ('emp:list', '雇员列表', 'emp', database()) ;
+-- 定义用户与角色的关系
+INSERT INTO member_role(mid, rid, dbname) VALUES ('admin', 'member', database()) ;
+INSERT INTO member_role(mid, rid, dbname) VALUES ('admin', 'dept', database()) ;
+INSERT INTO member_role(mid, rid, dbname) VALUES ('admin', 'emp', database()) ;
+INSERT INTO member_role(mid, rid, dbname) VALUES ('yootk', 'emp', database()) ;
+INSERT INTO member_role(mid, rid, dbname) VALUES ('mermaid', 'dept', database()) ;
+COMMIT ;
+
+3、
+server: # 服务端配置
+  port: 8201 # 8201端口
+mybatis-plus: # MyBatisPlus配置
+  type-aliases-package: com.yootk.provider.vo  # 别名配置
+spring:
+  application: # 配置应用信息
+    name: token.provider # 是微服务的名称
+  cloud: # Cloud配置
+    sentinel: # 监控配置
+      transport: # 传输配置
+        port: 8719 # Sentinel组件启用之后默认会启动一个8719端口
+        dashboard: sentinel-server:8888 # 控制台地址
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        weight: 80
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        metadata:  # 根据自身的需要配置元数据
+          version: 1.0 # 自定义元数据项
+          company: 沐言科技 # 自定义元数据项
+          url: www.yootk.com # 自定义元数据项
+          author: 李兴华（爆可爱的小李老师） # 自定义元数据项
+  datasource: # 数据源配置
+    type: com.alibaba.druid.pool.DruidDataSource    # 数据源类型
+    driver-class-name: com.mysql.cj.jdbc.Driver     # 驱动程序类
+    url: jdbc:mysql://localhost:3306/token8201          # 连接地址
+    username: root                                  # 用户名
+    password: mysqladmin                            # 连接密码
+    druid: # druid相关配置
+      initial-size: 5                               # 初始化连接池大小
+      min-idle: 10                                  # 最小维持连接池大小
+      max-active: 50                                # 最大支持连接池大小
+      max-wait: 60000                               # 最大等待时间
+      time-between-eviction-runs-millis: 60000      # 关闭空闲连接间隔
+      min-evictable-idle-time-millis: 30000         # 连接最小生存时间
+      validation-query: SELECT 1 FROM dual          # 状态检测
+      test-while-idle: true # 空闲时检测连接是否有效
+      test-on-borrow: false # 申请时检测连接是否有效
+      test-on-return: false # 归还时检测连接是否有效
+      pool-prepared-statements: false # PSCache缓存
+      max-pool-prepared-statement-per-connection-size: 20 # 配置PS缓存
+      filters: stat, wall, slf4j # 开启过滤
+      stat-view-servlet: # 监控界面配置
+        enabled: true # 启用druid监控界面
+        allow: 127.0.0.1      # 访问白名单
+        login-username: muyan # 用户名
+        login-password: yootk # 密码
+        reset-enable: true # 允许重置
+        url-pattern: /druid/* # 访问路径
+      web-stat-filter:
+        enabled: true # 启动URI监控
+        url-pattern: /* # 跟踪全部服务
+        exclusions: "*.js,*.gif,*.jpg,*.bmp,*.png,*.css,*.ico,/druid/*" # 跟踪排除
+      filter:
+        slf4j: # 日志
+          enabled: true # 启用SLF4j监控
+          data-source-log-enabled: true # 启用数据库日志
+          statement-executable-sql-log-enable: true # 执行日志
+          result-set-log-enabled: true # ResultSet日志启用
+        stat: # SQL监控
+          merge-sql: true # 合并统计
+          log-slow-sql: true # 慢执行记录
+          slow-sql-millis: 1 # 慢SQL执行时间
+        wall: # SQL防火墙
+          enabled: true   # SQL防火墙
+          config: # 防火墙规则
+            multi-statement-allow: true # 允许执行批量SQL
+            delete-allow: false # 禁止执行删除语句
+      aop-patterns: "com.yootk.provider.action.*,com.yootk.provider.service.*,com.yootk.provider.dao.*" # Spring监控
+
+yootk:
+  security:
+    config:
+      jwt:
+        sign: muyan
+        issuer: MuyanYootk
+        secret: www.yootk.com
+        expire: 100000 # 单位：秒
+      password:
+        encrypt:
+          repeat: 5
+          salt: www.yootk.com
+
+4、
+package com.yootk.provider.vo;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+@Data
+@TableName("member") // 映射表名称
+public class Member {
+    @TableId // 主键字段
+    private String mid;
+    private String name;
+    private String password;
+    private Integer locked;
+    private String dbname;
+}
+
+
+5、
+
+package com.yootk.provider.vo;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+@Data
+@TableName("role")
+public class Role {
+    @TableId
+    private String rid;
+    private String title;
+    private String dbname;
+}
+
+
+6、
+
+package com.yootk.provider.vo;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+@Data
+@TableName("action")
+public class Action {
+    @TableId
+    private String actid;
+    private String title;
+    private String rid;
+    private String dbname;
+}
+
+
+7、
+package com.yootk.provider.dao;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.yootk.provider.vo.Member;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface IMemberDAO extends BaseMapper<Member> {
+}
+
+
+
+
+8、
+package com.yootk.provider.dao;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.yootk.provider.vo.Role;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.Set;
+
+@Mapper
+public interface IRoleDAO extends BaseMapper<Role> {
+    public Set<String> findAllByMember(String mid); // 根据用户名查询角色
+}
+
+
+
+9、
+package com.yootk.provider.dao;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.yootk.provider.vo.Action;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.Set;
+
+@Mapper
+public interface IActionDAO extends BaseMapper<Action> {
+    public Set<String> findAllByMember(String mid); // 获取权限信息
+}
+
+
+10、
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yootk.provider.dao.IMemberDAO">
+</mapper>
+
+11、
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yootk.provider.dao.IRoleDAO">
+    <select id="findAllByMember" parameterType="string" resultType="string">
+      SELECT rid FROM member_role WHERE mid=#{mid}
+  </select>
+</mapper>
+
+12、
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yootk.provider.dao.IActionDAO">
+    <select id="findAllByMember" parameterType="string" resultType="string">
+        SELECT actid FROM action WHERE rid IN(
+          SELECT rid FROM member_role WHERE mid=#{mid})
+    </select>
+</mapper>
+
+13、
+package com.yootk.common.dto;
+
+import lombok.Data;
+
+@Data
+public class MemberDTO {
+    private String mid;
+    private String password;
+}
+
+14、
+package com.yootk.service;
+
+import com.yootk.common.dto.MemberDTO;
+
+import java.util.Map;
+
+public interface IMemberService {
+    // 用户登录完成之后所有的数据通过Map集合进行返回，而后会包含有如下的一些数据内容：
+    // 1、key = status、value = 登录状态（true、false）；
+    // 2、key = mid、value = 用户名；
+    // 3、key = name、value = 姓名；
+    // 4、key = resource、value = 授权信息
+    // 4-1、key = roles、value = 用户拥有的全部角色
+    // 4-2、key = roles、value = 用户拥有的全部的权限
+    public Map<String, Object> login(MemberDTO memberDTO);
+}
+
+15、
+package com.yootk.provider.service.impl;
+
+import com.yootk.common.dto.MemberDTO;
+import com.yootk.provider.dao.IActionDAO;
+import com.yootk.provider.dao.IMemberDAO;
+import com.yootk.provider.dao.IRoleDAO;
+import com.yootk.provider.vo.Member;
+import com.yootk.service.IMemberService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class MemberServiceImpl implements IMemberService {
+    @Autowired
+    private IMemberDAO memberDAO;
+    @Autowired
+    private IRoleDAO roleDAO;
+    @Autowired
+    private IActionDAO actionDAO;
+    @Override
+    public Map<String, Object> login(MemberDTO memberDTO) {
+        Map<String, Object> result = new HashMap<>();
+        Member member = this.memberDAO.selectById(memberDTO.getMid()); // 查询用户数据
+        // 用户信息为空、密码不相等或者用户状态被锁定
+        if (member == null || !member.getPassword().equals(memberDTO.getPassword()) || member.getLocked().equals(1)) {
+            result.put("status", false); // 登录失败
+        } else {    // 一切正常，获取其他信息
+            result.put("status", true); // 登录成功
+            result.put("mid", memberDTO.getMid());
+            result.put("name", member.getName());
+            Map<String, Object> resource = new HashMap<>();
+            resource.put("roles", this.roleDAO.findAllByMember(memberDTO.getMid()));
+            resource.put("actions", this.actionDAO.findAllByMember(memberDTO.getMid()));
+            result.put("resource", resource);
+        }
+        return result;
+    }
+}
+
+16、
+package com.yootk.provider;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class StartTokenApplication8201 {
+    public static void main(String[] args) {
+        SpringApplication.run(StartTokenApplication8201.class, args);
+    }
+}
+
+17、
+package com.yootk.test;
+
+import com.yootk.common.dto.MemberDTO;
+import com.yootk.jwt.StartJWTConfiguration;
+import com.yootk.jwt.service.IEncryptService;
+import com.yootk.provider.StartTokenApplication8201;
+import com.yootk.service.IMemberService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.web.WebAppConfiguration;
+
+@ExtendWith(SpringExtension.class)
+@WebAppConfiguration
+@SpringBootTest(classes = StartTokenApplication8201.class) // 随便写的测试类
+public class TestMemberService {
+    @Autowired
+    private IMemberService memberService;
+    @Autowired
+    private IEncryptService encryptService; // 自动装配模块提供的
+    @Test
+    public void testLogin() {
+        MemberDTO memberDTO = new MemberDTO();
+        memberDTO.setMid("admin");
+        memberDTO.setPassword(this.encryptService.getEncryptPassword("hello"));
+        System.out.println(this.memberService.login(memberDTO));
+    }
+}
+
+18、
+package com.yootk.provider.action;
+
+import com.yootk.common.dto.MemberDTO;
+import com.yootk.jwt.service.IEncryptService;
+import com.yootk.jwt.service.ITokenService;
+import com.yootk.service.IMemberService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/token/*")
+public class TokenAction {
+    @Autowired
+    private IMemberService memberService; // 本模块提供的
+    @Autowired
+    private IEncryptService encryptService; // yootk-starter-jwt模块提供的
+    @Autowired
+    private ITokenService tokenService; // yootk-starter-jwt模块提供的
+    @RequestMapping("create")
+    public Object login(MemberDTO memberDTO) {
+        // 对用户传入的密码信息进行加密处理
+        memberDTO.setPassword(this.encryptService.getEncryptPassword(memberDTO.getPassword()));
+        Map<String, Object> result = this.memberService.login(memberDTO); // 登录业务处理
+        if (((Boolean)result.get("status"))) {  // 登录状态
+            return this.tokenService.createToken(result.get("mid").toString(), (Map<String, Object>) result.get("resource"));
+        }
+        return null;
+    }
+    @RequestMapping("parse")
+    public Object parseToken(String token) {
+        return this.tokenService.parseToken(token); // Token解析处理
+    }
+}
+
+19、
+127.0.0.1	token-server-8201
+
+20、
+token-server-8201:8201/token/create?mid=admin&password=hello
+
+21、
+token-server-8201:8201/token/parse?token=eyJhdXRob3IiOiLmnY7lhbTljY4iLCJtb2R1bGUiOiJ0b2tlbi5wcm92aWRlciIsImFsZyI6IkhTMjU2In0.eyJtc2ciOiLkuJbnlYzkuIrniIblj6_niLHnmoTogIHluIgg4oCU4oCUIOeIhuWPr-eIseeahOWwj-adjuiAgeW4iCIsInN1YiI6IntcInJvbGVzXCI6W1wibWVtYmVyXCIsXCJlbXBcIixcImRlcHRcIl0sXCJhY3Rpb25zXCI6W1wiZW1wOmxpc3RcIixcImRlcHQ6ZWRpdFwiLFwiZGVwdDpsaXN0XCIsXCJlbXA6ZWRpdFwiLFwibWVtYmVyOmFkZFwiLFwiZGVwdDphZGRcIixcImVtcDphZGRcIixcIm1lbWJlcjplZGl0XCIsXCJkZXB0OmRlbGV0ZVwiLFwibWVtYmVyOmRlbGV0ZVwiLFwibWVtYmVyOmxpc3RcIixcImVtcDpkZWxldGVcIl19Iiwic2l0ZSI6Ind3dy55b290ay5jb20iLCJpc3MiOiJNdXlhbllvb3RrIiwiZXhwIjoxNjMzNjc2MjIwLCJpYXQiOjE2MzM1NzYyMjAsIm5pY2UiOiJHb29kIEdvb2QgR29vZCIsImp0aSI6ImFkbWluIn0.3HA8dqdgi9Lr0Nlzg76CoJiiFcDwK-Vh9nf5facEfRQ

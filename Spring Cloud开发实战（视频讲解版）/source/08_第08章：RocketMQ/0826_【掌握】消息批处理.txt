@@ -1,0 +1,212 @@
+1、
+package com.yootk.rockemq;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
+import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
+import org.apache.rocketmq.client.consumer.MessageSelector;
+import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
+import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
+import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
+import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.remoting.RPCHook;
+
+import java.util.List;
+
+public class MessageConsumer { // 消息消费者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String CONSUMER_GROUP = "muyan-group"; // 定义消费组
+    public static final String TOPIC = "TopicYootk"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、要在项目之中启动一个消费者的处理程序类，但是这个消费者分为两种形式
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(CONSUMER_GROUP, clientHook, new AllocateMessageQueueAveragely());
+        consumer.setNamesrvAddr(NAME_SERVER_LIST); // 通过NameServer获取相应的Broker数据
+        consumer.subscribe(TOPIC, "*"); // 匹配指定主题的所有消息
+        // 3、进行消息监听的处理操作，在监听的时候要使用专属的监听接口
+        consumer.registerMessageListener(new MessageListenerConcurrently() { // 准备接收消息
+            @Override
+            public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs, ConsumeConcurrentlyContext context) {
+                msgs.forEach((msg)->{
+                    System.out.printf("【%s】接收到新的消息：body = %s、level = %s %n", Thread.currentThread().getName(), new String(msg.getBody()), msg.getProperty("level"));
+                });
+                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS; // 消息消费成功
+            }
+        });
+        consumer.start(); // 启动消息的消费者
+    }
+}
+
+
+2、
+package com.yootk.rockemq;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.remoting.RPCHook;
+import org.apache.rocketmq.remoting.common.RemotingHelper;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MessageBatchProducer { // 消息生产者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String PRODUCER_GROUP = "muyan-group"; // 定义消费组
+    public static final String TOPIC = "TopicYootk"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、创建一个消息的生产者
+        DefaultMQProducer producer = new DefaultMQProducer(PRODUCER_GROUP, clientHook);
+        producer.setNamesrvAddr(NAME_SERVER_LIST); // NameServer地址
+        producer.start(); // 启动生产者
+        // 3、如果要想进行批处理的分配，一般都是通过List集合保存批量消息数据的
+        List<Message> messages = new ArrayList<>(); // 保存批处理消息
+        for (int x = 0; x < 100; x++) { // 循环数据的配置
+            Message msg = new Message(TOPIC, "沐言科技：www.yootk.com"
+                    .getBytes(RemotingHelper.DEFAULT_CHARSET)); // 消息需要二进制
+            messages.add(msg); // 将消息保存在List集合之中
+        }
+        SendResult result = producer.send(messages); // 消息批处理发送
+        System.out.printf("【消息批量发送】发送状态：%s %n", result.getSendStatus()); // 获取发送的结果
+        producer.shutdown(); // 关闭生产者
+    }
+}
+
+3、
+package com.yootk.rockemq.util;
+
+import org.apache.rocketmq.common.message.Message;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+// 每次拆分的时候会将完整的消息集合分为子集合的形式出现，每个子集合单独限制其大小
+public class MessageListSplitter implements Iterator<List<Message>> {
+    private static final int SIZE_LIMIT = 1024 * 1024 * 4; // 固定的数据量
+    private List<Message> messages; // 定义集合列表
+    // 整个的处理过程之中是需要进行集合长度计算的，这个计算是依据当前迭代的结果完成的\
+    private int currentIndex; // 当前处理到的索引
+    public MessageListSplitter(List<Message> messages) {
+        this.messages = messages; // 集合数据的存储
+    }
+    @Override
+    public boolean hasNext() {
+        return this.currentIndex < this.messages.size(); // 后面还有数据
+    }
+
+    @Override
+    public List<Message> next() { // 获取每一次的部分集合数据
+        int startIndex = this.getBeginIndex(); // 获取开始的索引
+        int nextIndex = startIndex; // 保存下一个索引
+        int totalSize = 0; // 要发送数据的总长度
+        for (; nextIndex < this.messages.size(); nextIndex ++) {    // 循环获取集合数据
+            Message message = this.messages.get(nextIndex); // 获取当前的数据
+            int messageSize = this.calcMessageSize(message); // 计算数据长度
+            if (messageSize + totalSize > SIZE_LIMIT) { // 分段
+                break;
+            } else {
+                totalSize += messageSize; // 保存的总长度
+            }
+        }
+        List<Message> subMessages = this.messages.subList(startIndex, nextIndex); // 截取子集合
+        this.currentIndex = nextIndex; // 当前的索引
+        return subMessages;
+    }
+    // 如果此时发送的消息量过大了，超过了整个的长度的定义，则进行消息的丢弃
+    public int getBeginIndex() {    // 消息处理的时候需要配置一个截取索引
+        Message currentMessage = this.messages.get(this.currentIndex); // 获取当前的消息内容
+        int messageSize = this.calcMessageSize(currentMessage); // 计算长度
+        while (messageSize > SIZE_LIMIT) {  // 保存的长度太大了（超大消息）
+            this.currentIndex += 1; // 考虑下一个开始的索引
+            Message message = this.messages.get(this.currentIndex);
+            messageSize = calcMessageSize(message);
+        }
+        return this.currentIndex; // 返回索引数据
+    }
+    public int calcMessageSize(Message message) {   // 计算每个消息的长度
+        int tempSize = message.getTopic().length() + message.getBody().length; // 消息的长度
+        Map<String, String> properties = message.getProperties(); // 附加属性的处理
+        for (Map.Entry<String, String> entry : properties.entrySet()) {
+            tempSize += entry.getKey().length() + entry.getValue().length(); // 属性的长度计算
+        }
+        tempSize = tempSize + 20; // 一些元数据或者是日志信息
+        return tempSize; // 返回单个消息的长度
+    }
+}
+
+
+4、
+package com.yootk.rockemq;
+
+import com.yootk.rockemq.util.MessageListSplitter;
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.remoting.RPCHook;
+import org.apache.rocketmq.remoting.common.RemotingHelper;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MessageBatchSplitProducer { // 消息生产者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String PRODUCER_GROUP = "muyan-group"; // 定义消费组
+    public static final String TOPIC = "TopicYootk"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、创建一个消息的生产者
+        DefaultMQProducer producer = new DefaultMQProducer(PRODUCER_GROUP, clientHook);
+        producer.setNamesrvAddr(NAME_SERVER_LIST); // NameServer地址
+        producer.start(); // 启动生产者
+        // 3、如果要想进行批处理的分配，一般都是通过List集合保存批量消息数据的
+        List<Message> messages = new ArrayList<>(); // 保存批处理消息
+        for (int x = 0; x < 1000; x++) { // 循环数据的配置
+            Message msg = new Message(TOPIC, "沐言科技：www.yootk.com"
+                    .getBytes(RemotingHelper.DEFAULT_CHARSET)); // 消息需要二进制
+            messages.add(msg); // 将消息保存在List集合之中
+        }
+        MessageListSplitter messageListSplitter = new MessageListSplitter(messages);
+        while(messageListSplitter.hasNext()) { // 每次只取出部分的集合
+            SendResult result = producer.send(messageListSplitter.next()); // 消息批处理发送
+            System.out.printf("【消息批量发送】发送状态：%s %n", result.getSendStatus()); // 获取发送的结果
+        }
+        producer.shutdown(); // 关闭生产者
+    }
+}
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

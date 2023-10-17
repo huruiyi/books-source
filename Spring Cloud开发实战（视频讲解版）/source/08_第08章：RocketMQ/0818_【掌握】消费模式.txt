@@ -1,0 +1,71 @@
+1、
+package com.yootk.rockemq;
+
+import org.apache.rocketmq.acl.common.AclClientRPCHook;
+import org.apache.rocketmq.acl.common.SessionCredentials;
+import org.apache.rocketmq.client.consumer.DefaultLitePullConsumer;
+import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
+import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
+import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
+import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
+import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.remoting.RPCHook;
+
+import java.util.List;
+
+public class MessagePullConsumer { // 消息消费者
+    // 如果此时你使用的是集群服务，则每个主机之间使用“,”分割
+    public static final String NAME_SERVER_LIST = "rocketmq-server:9876"; // NameServer
+    public static final String CONSUMER_GROUP = "muyan-group"; // 定义消费组
+    public static final String TOPIC = "TopicYootk"; // 定义主题名称
+    public static final String ACCESS_KEY = "RocketMQMuyan"; // 定义用户名
+    public static final String SECRET_KEY = "helloyootk"; // 定义密码
+    public static void main(String[] args) throws Exception { // 懒人必备的处理形式
+        // 1、由于此时的RocketMQ启动了ACL安全认证的保护机制，所以需要配置相应的回调
+        RPCHook clientHook = new AclClientRPCHook(new SessionCredentials(ACCESS_KEY, SECRET_KEY));
+        // 2、要在项目之中启动一个消费者的处理程序类，但是这个消费者分为两种形式
+        DefaultLitePullConsumer consumer = new DefaultLitePullConsumer(CONSUMER_GROUP, clientHook);
+        consumer.setNamesrvAddr(NAME_SERVER_LIST); // 通过NameServer获取相应的Broker数据
+        consumer.subscribe(TOPIC, "*"); // 匹配指定主题的所有消息
+        consumer.start(); // 启动消费端
+        boolean running = true; // 定义一个轮询的标记
+        while (running) {   // 持续抓取数据
+            List<MessageExt> messages = consumer.poll(); // 抓取消息
+            if (messages != null && messages.size() > 0) {
+                for (Message msg : messages) {
+                    System.out.printf("%s%n", msg);
+                }
+            }
+        }
+
+        consumer.shutdown(); // 启动消息的消费者
+    }
+}
+
+
+
+2、
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

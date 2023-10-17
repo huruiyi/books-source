@@ -1,0 +1,119 @@
+1、
+spring:
+  cloud:
+    stream:
+      rocketmq:
+        binder:
+          name-server: rocketmq-server:9876 # NameServer地址
+      bindings:
+        output:
+          destination: TopicSSC  # 消息主题
+          group: scs-producer-group # 生产组
+          access-key: RocketMQMuyan # 用户名
+          secret-key: helloyootk # 密码
+
+2、
+package com.yootk.service;
+
+import com.yootk.common.dto.DeptDTO;
+
+public interface IDeptMessageService { // 定义业务接口
+    public void sendMessage(DeptDTO dto); // 消息发送
+}
+
+
+3、
+
+package com.yootk.service.impl;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.service.IDeptMessageService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DeptMessageServiceImpl implements IDeptMessageService {
+    @Autowired
+    private MessageChannel output; // 消息发送通道
+    @Override
+    public void sendMessage(DeptDTO dto) {
+        this.output.send(MessageBuilder.withPayload(dto).build()); // 进行消息的发送
+    }
+}
+
+4、
+package com.yootk.config;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class ProducerConfig { // 生产者的配置类
+    @Bean
+    public ObjectMapper getJacksonObjectMapper() {
+        return new ObjectMapper();
+    }
+}
+
+
+5、
+package com.yootk;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.stream.annotation.EnableBinding;
+import org.springframework.cloud.stream.messaging.Source;
+
+@SpringBootApplication
+@EnableBinding(Source.class)
+public class StartRocketMQProducerApplication { // 启动消息生产者服务
+    public static void main(String[] args) {
+        SpringApplication.run(StartRocketMQProducerApplication.class, args);
+    }
+}
+
+
+6、
+package com.yootk.test;
+
+import com.yootk.StartRocketMQProducerApplication;
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.service.IDeptMessageService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.web.WebAppConfiguration;
+
+import java.util.concurrent.TimeUnit;
+
+@ExtendWith(SpringExtension.class)
+@WebAppConfiguration
+@SpringBootTest(classes = StartRocketMQProducerApplication.class)
+public class TestDeptMessageService { // 进行业务的测试
+    @Autowired
+    private IDeptMessageService messageService;
+    @Test
+    public void testSend() throws Exception {
+        DeptDTO dto = new DeptDTO();
+        dto.setDeptno(10L);
+        dto.setDname("沐言科技教学部");
+        dto.setLoc("北京");
+        this.messageService.sendMessage(dto); // 消息发送
+        TimeUnit.SECONDS.sleep(20); // 稍微等一等
+    }
+}
+
+
+7、
+
+
+8、
+
+
+9、
+

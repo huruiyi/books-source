@@ -1,0 +1,85 @@
+1、
+cd /var/ftp
+wget https://www.haproxy.org/download/2.4/src/haproxy-2.4.2.tar.gz
+
+2、
+tar xzvf /var/ftp/haproxy-2.4.2.tar.gz -C /usr/local/src/
+
+3、
+cd /usr/local/src/haproxy-2.4.2/
+
+
+4、
+make TARGET=custom ARCH=x86_64 PREFIX=/usr/local/haproxy
+make install PREFIX=/usr/local/haproxy
+
+5、
+vi /usr/local/haproxy/haproxy.cfg
+
+global											# 全局配置
+	log					127.0.0.1 local0				# 启用日志
+	nbproc				1						# 监控进程个数
+	maxconnrate			300						# 进程每秒所能创建的最大连接数
+	maxcomprate			300						# 压缩速率
+	maxsessrate			500						# 进程每秒能创建的会话数量
+	chroot				/usr/local/haproxy			# HAProxy部署路径
+	pidfile				/usr/local/haproxy/haproxy.pid	# pid文件存储路径
+	maxconn				30000					# 进程所能接收的最大并发连接数
+	user				haproxy					# 启动用户名
+	group				haproxy					# 启动用户组
+	daemon										# 后台模式运行
+	stats 				socket /usr/local/haproxy/stats	# 开启统计Socket
+defaults											# 默认配置
+	mode				http						# http处理模式
+	log				global					# 全局日志配置
+	option				dontlognull					# 不记录健康日志信息
+	option				redispatch					# 允许重新分配session
+	option				http-use-htx				# 启用HTTP/2
+	option				logasap					# 传输大文件时提前记录日志
+	option				httplog					# 日志类别
+	retries				3						# 失败重试次数
+	timeout queue			1m						# 队列超时
+	timeout connect			5m						# 连接超时
+	timeout client			5m						# 客户端超时
+	timeout server			5m						# 服务端超时
+	timeout http-keep-alive	100s						# 保持HTTP连接
+	timeout check			10s						# 超时检查
+listen admin_stats									# 管理控制台
+	stats 				enable					# 启用管理控制台
+	bind 				0.0.0.0:9999 				# 监控端口设置
+	mode 				http						# 管理控制台模式
+	log 				global					# 日志配置
+	maxconn 			10						# 最大连接数量
+	stats uri 			/admin  					# 登录监控子路径配置
+	stats realm 			welcome\ Haproxy			# 登录提示信息
+	stats auth 			admin:admin  				# 监控的账号密码
+	stats admin 			if TRUE					# 启用管理员模式
+	option 				httplog					# http日志记录
+	stats refresh 			30s						# 监控刷新时间
+	stats 				hide-version				# 隐藏页面版本号
+frontend nacos_cluster									# 代理集群配置（名称自定义）
+	bind				:9848						# 代理端口
+	mode				http						# 代理模式
+	log				global					# 日志配置
+	maxconn				8000						# 最大连接数
+	default_backend 		nacos_cluster_nodes			# 代理节点名称（名称自定义）
+backend nacos_cluster_nodes							# 集群节点（名称自定义）
+	mode           http								# 代理模式
+	server  nacos-a nacos-cluster-a:9848 check				# 集群节点
+	server  nacos-b nacos-cluster-b:9848 check				# 集群节点
+	server  nacos-c nacos-cluster-c:9848 check				# 集群节点
+
+
+6、
+useradd haproxy
+
+7、
+/usr/local/haproxy/sbin/haproxy -f /usr/local/haproxy/haproxy.cfg
+
+8、
+firewall-cmd --zone=public --add-port=9999/tcp --permanent
+firewall-cmd --zone=public --add-port=9848/tcp --permanent
+firewall-cmd --reload
+
+9、
+http://nacos-proxy:9999/admin

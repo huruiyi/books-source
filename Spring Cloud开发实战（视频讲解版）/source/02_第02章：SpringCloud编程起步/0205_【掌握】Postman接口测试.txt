@@ -1,0 +1,29 @@
+1、
+curl http://provider-dept-8001:8001/provider/dept/get/1
+curl http://provider-dept-8001:8001/provider/dept/list
+curl "http://provider-dept-8001:8001/provider/dept/split?cp=1&ls=2&col=dname&kw="
+curl -X POST -d "dname=muyan&loc=yootk" "http://provider-dept-8001:8001/provider/dept/add"
+
+2、
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

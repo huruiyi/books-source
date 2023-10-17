@@ -1,0 +1,28 @@
+1、
+nacos.core.auth.enabled=false
+
+2、
+127.0.0.1	sentinel-nacos-server
+
+3、
+java -Dserver.port=8888 -Dcsp.sentinel.dashboard.server=localhost:8888 -Dproject.name=sentinel-dashboard -Dsentinel.dashboard.auth.username=muyan -Dsentinel.dashboard.auth.password=yootk -jar sentinel-dashboard.jar
+
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

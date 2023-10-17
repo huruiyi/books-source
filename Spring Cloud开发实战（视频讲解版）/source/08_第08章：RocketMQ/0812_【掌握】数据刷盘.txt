@@ -1,0 +1,98 @@
+1、
+private boolean mmapOperation() {
+    boolean isSuccess = false; // 成功状态
+    AllocateRequest req = null; // 分配请求
+    try { // 如果要想进行分配，则会将分配的请求保存在一个请求队列之中，起到数据缓冲的作用
+        req = this.requestQueue.take();// 通过请求队列获取请求
+        AllocateRequest expectedRequest = this.requestTable.get(req.getFilePath());
+        if (null == expectedRequest) { // 如果请求为空，表示不需要分配
+            log.warn("this mmap request expired, maybe cause timeout " + req.getFilePath() + " "
+                + req.getFileSize());
+            return true; // 直接返回true
+        }
+        if (expectedRequest != req) { // 无效的请求
+            log.warn("never expected here,  maybe cause timeout " + req.getFilePath() + " "
+                + req.getFileSize() + ", req:" + req + ", expectedRequest:" + expectedRequest);
+            return true;
+        } // 开始处理MappedFile分配操作
+        if (req.getMappedFile() == null) { // 如果此时没有MappedFile实例
+            long beginTime = System.currentTimeMillis();
+            MappedFile mappedFile; // 创建MappedFile
+            if (messageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
+                try { // 读取MappedFile
+                    mappedFile = ServiceLoader.load(MappedFile.class).iterator().next();
+                    mappedFile.init(req.getFilePath(), req.getFileSize(), 
+			messageStore.getTransientStorePool());// MappedFile初始化
+                } catch (RuntimeException e) {
+                    log.warn("Use default implementation.");
+                    mappedFile = new MappedFile(req.getFilePath(), req.getFileSize(), 
+			messageStore.getTransientStorePool());// 创建
+                }
+            } else { // 还是要创建MappedFile
+                mappedFile = new MappedFile(req.getFilePath(), req.getFileSize());
+            }
+            long elapsedTime = UtilAll.computeElapsedTimeMilliseconds(beginTime);
+            if (elapsedTime > 10) {
+                int queueSize = this.requestQueue.size();
+                log.warn("create mappedFile spent time(ms) " + 
+			elapsedTime + " queue size " + queueSize
+                    + " " + req.getFilePath() + " " + req.getFileSize());
+            }
+            // 为数据写入做准备（预准备过程）
+            if (mappedFile.getFileSize() >= this.messageStore.getMessageStoreConfig()
+                .getMappedFileSizeCommitLog() &&
+                this.messageStore.getMessageStoreConfig().isWarmMapedFileEnable()) { // 预热？
+                mappedFile.warmMappedFile(
+		this.messageStore.getMessageStoreConfig().getFlushDiskType(),
+                    this.messageStore.getMessageStoreConfig()
+			.getFlushLeastPagesWhenWarmMapedFile());
+            }
+            req.setMappedFile(mappedFile); // 为请求设置分配好的MappedFile对象
+            this.hasException = false;
+            isSuccess = true;
+        }
+    } catch (InterruptedException e) {
+        log.warn(this.getServiceName() + " interrupted, possibly by shutdown.");
+        this.hasException = true;
+        return false;
+    } catch (IOException e) {
+        log.warn(this.getServiceName() + " service has exception. ", e);
+        this.hasException = true;
+        if (null != req) {
+            requestQueue.offer(req);
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException ignored) {
+            }
+        }
+    } finally {
+        if (req != null && isSuccess)
+            req.getCountDownLatch().countDown();
+    }
+    return true;
+}
+
+
+2、
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

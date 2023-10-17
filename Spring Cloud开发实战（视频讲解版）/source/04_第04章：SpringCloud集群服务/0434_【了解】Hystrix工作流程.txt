@@ -1,0 +1,165 @@
+1、
+package com.netflix.hystrix;
+public abstract class HystrixCommand<R> extends AbstractCommand<R> 
+implements HystrixExecutable<R>, HystrixInvokableInfo<R>, HystrixObservable<R> {
+// 【J.U.C原子引用】定义了当前要执行的线程对象
+    private final AtomicReference<Thread> executionThread = new AtomicReference<Thread>();
+// 【J.U.C原子布尔】定义一个优雅的线程停止操作（Java就业编程实战这本书是有讲解的）
+    private final AtomicBoolean interruptOnFutureCancel = new AtomicBoolean(false);
+    protected abstract R run() throws Exception; // 定义了Hystrix的具体执行
+    protected R getFallback() { // 获取失败回退的操作
+        throw new UnsupportedOperationException("No fallback available.");
+    }
+    @Override
+    final protected Observable<R> getExecutionObservable() { // 执行请求
+        return Observable.defer(new Func0<Observable<R>>() { 创建数据响应
+            @Override
+            public Observable<R> call() {
+                try {
+                    return Observable.just(run());// 请求发送
+                } catch (Throwable ex) {
+                    return Observable.error(ex);
+                }
+            }
+        }).doOnSubscribe(new Action0() { // 订阅处理
+            @Override
+            public void call() {
+                executionThread.set(Thread.currentThread());// 保存当前的执行线程
+            }
+        });
+    }
+    @Override
+    final protected Observable<R> getFallbackObservable() { // 失败回退的订阅
+        return Observable.defer(new Func0<Observable<R>>() { 
+            @Override
+            public Observable<R> call() {
+                try {
+                    return Observable.just(getFallback());// 调用失败回退
+                } catch (Throwable ex) {
+                    return Observable.error(ex); // 响应错误状态
+                }
+            }
+        });
+    }
+    public R execute() { // 具体操作的执行
+        try {
+            return queue().get();// 按照队列的方式来执行，所有的调用为异步处理
+        } catch (Exception e) {
+            throw Exceptions.sneakyThrow(decomposeException(e));
+        }
+    }
+    public Future<R> queue() {} // 异步处理队列
+    @Override
+    protected String getFallbackMethodName() { // 获取失败回退的方法名称
+        return "getFallback";
+    }
+    @Override
+    protected boolean isFallbackUserDefined() { // 环境的判断
+        Boolean containsFromMap = commandContainsFallback.get(commandKey);
+        if (containsFromMap != null) {
+            return containsFromMap;
+        } else {
+            Boolean toInsertIntoMap;
+            try {
+                getClass().getDeclaredMethod("getFallback");
+                toInsertIntoMap = true;
+            } catch (NoSuchMethodException nsme) {
+                toInsertIntoMap = false;
+            }
+            commandContainsFallback.put(commandKey, toInsertIntoMap);
+            return toInsertIntoMap;
+        }
+    }
+    @Override
+    protected boolean commandIsScalar() {
+        return true;
+    }
+}
+
+
+2、
+package com.netflix.hystrix.contrib.javanica.command;
+import rx.Observable;
+import java.util.concurrent.Future;
+public enum ExecutionType {
+    ASYNCHRONOUS,  // 异步处理（queue）
+    SYNCHRONOUS,  // 同步处理（execute）
+    OBSERVABLE;  // 响应式处理（observer）
+    public static ExecutionType getExecutionType(Class<?> type) {
+        if (Future.class.isAssignableFrom(type)) {
+            return ExecutionType.ASYNCHRONOUS;
+        } else if (Observable.class.isAssignableFrom(type)) {
+            return ExecutionType.OBSERVABLE;
+        } else {
+            return ExecutionType.SYNCHRONOUS;
+        }
+    }
+}
+
+
+3、
+package com.netflix.hystrix.contrib.javanica.command;
+public class CommandExecutor {
+    public static Object execute(HystrixInvokable invokable, ExecutionType executionType, MetaHolder metaHolder) throws RuntimeException { // 具体的命令执行
+        Validate.notNull(invokable);
+        Validate.notNull(metaHolder);
+        switch (executionType) { // 判断当前的执行类型
+            case SYNCHRONOUS: { // 同步的处理
+                return castToExecutable(invokable, executionType).execute();
+            }
+            case ASYNCHRONOUS: { // 是否为异步处理
+                HystrixExecutable executable = castToExecutable(invokable, executionType);
+                if (metaHolder.hasFallbackMethodCommand()
+                        && ExecutionType.ASYNCHRONOUS == metaHolder.getFallbackExecutionType()) {
+                    return new FutureDecorator(executable.queue());
+                }
+                return executable.queue();
+            }
+            case OBSERVABLE: { // 是否为响应式的调用
+                HystrixObservable observable = castToObservable(invokable);
+                return ObservableExecutionMode.EAGER == metaHolder.getObservableExecutionMode() ? observable.observe() : observable.toObservable();
+            }
+            default:
+                throw new RuntimeException("unsupported execution type: " + executionType);
+        }
+    }
+    private static HystrixExecutable castToExecutable(HystrixInvokable invokable, ExecutionType executionType) {
+        if (invokable instanceof HystrixExecutable) {
+            return (HystrixExecutable) invokable;
+        }
+        throw new RuntimeException("Command should implement " + HystrixExecutable.class.getCanonicalName() + " interface to execute in: " + executionType + " mode");
+    }
+    private static HystrixObservable castToObservable(HystrixInvokable invokable) {
+        if (invokable instanceof HystrixObservable) {
+            return (HystrixObservable) invokable;
+        }
+        throw new RuntimeException("Command should implement " + HystrixObservable.class.getCanonicalName() + " interface to execute in observable mode");
+    }
+}
+
+
+4、
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+org.springframework.cloud.netflix.hystrix.HystrixAutoConfiguration,\
+org.springframework.cloud.netflix.hystrix.HystrixCircuitBreakerAutoConfiguration,\
+org.springframework.cloud.netflix.hystrix.ReactiveHystrixCircuitBreakerAutoConfiguration,\
+org.springframework.cloud.netflix.hystrix.security.HystrixSecurityAutoConfiguration
+
+org.springframework.cloud.client.circuitbreaker.EnableCircuitBreaker=\
+org.springframework.cloud.netflix.hystrix.HystrixCircuitBreakerConfiguration
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

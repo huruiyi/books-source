@@ -1,0 +1,26 @@
+1、
+zipkin.io
+
+2、
+git clone https://github.com/openzipkin/zipkin
+
+3、
+mvn clean package -DskipTests
+
+4、
+java -jar zipkin-server-2.23.3-SNAPSHOT-exec.jar
+
+5、
+127.0.0.1	zipkin-server
+
+6、
+zipkin-server:9411
+
+7、
+
+
+8、
+
+
+9、
+

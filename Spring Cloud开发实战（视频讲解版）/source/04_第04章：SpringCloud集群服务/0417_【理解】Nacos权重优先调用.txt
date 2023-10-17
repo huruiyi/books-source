@@ -1,0 +1,103 @@
+1、
+spring:
+  application: # 配置应用信息
+    name: dept.provider # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        weight: 10
+
+2、
+package muyan.yootk.loadbalancer.rule;
+
+import com.alibaba.cloud.nacos.NacosDiscoveryProperties;
+import com.alibaba.cloud.nacos.ribbon.NacosServer;
+import com.alibaba.nacos.api.exception.NacosException;
+import com.alibaba.nacos.api.naming.NamingService;
+import com.alibaba.nacos.api.naming.pojo.Instance;
+import com.netflix.client.config.IClientConfig;
+import com.netflix.loadbalancer.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+
+// 如果要想进行规则的定义常见的做法是直接使用IRule接口完成
+// 推荐的做法是使用IRule接口对应的抽象子类AbstractLoadBalancerRule
+@Slf4j
+public class NacosWeightRule extends AbstractLoadBalancerRule { // Nacos权重规则
+    @Autowired
+    private NacosDiscoveryProperties nacosDiscoveryProperties; // Nacos配置属性
+    private IClientConfig clientConfig;
+    @Override
+    public void initWithNiwsConfig(IClientConfig clientConfig) {
+        this.clientConfig = clientConfig;
+    }
+    @Override
+    public Server choose(Object key) { // 选择服务实例
+        BaseLoadBalancer loadBalancer = (BaseLoadBalancer) super.getLoadBalancer(); // 获取负载均衡器
+        String name = loadBalancer.getName(); // 调用微服务名称
+        // 此时的场景就变为了原生项目的NacosClient组件进行处理的操作了
+        NamingService namingService = this.nacosDiscoveryProperties.namingServiceInstance(); // 发现服务
+        // 根据指定的服务名称以及分组名称获取服务的实例
+        try {
+            Instance instance = namingService.selectOneHealthyInstance(name, this.nacosDiscoveryProperties.getGroup());
+            // 整个的代码是工作在SpringCloud之中的，所以需要将获取到的Instance对象实例转为Server对象实例
+            return new NacosServer(instance); // NacosServer是Server子类
+        } catch (NacosException e) {
+            log.error("获取Nacos注册的微服务实例出错，异常为：" + e);
+            return null;
+        }
+    }
+}
+
+
+3、
+package muyan.yootk.config.ribbon; // 该包不在应用程序启动类的扫描包路径下
+
+import com.netflix.loadbalancer.IRule;
+import muyan.yootk.loadbalancer.rule.NacosWeightRule;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration // 这个类必须使用该注解定义
+public class DeptProviderRibbonConfig {
+    @Bean // Bean注册
+    public IRule ribbonRule() { // 自定义负载均衡规则
+        return new NacosWeightRule(); // 随机读取
+    }
+}
+
+
+4、
+package com.yootk.consumer;
+
+import muyan.yootk.config.ribbon.DeptProviderRibbonConfig;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.ribbon.RibbonClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+// 如果此时要有多个配置项，可以使用@RibbonClients注解，该注解可以配置多个@RibbonClient
+@RibbonClient(name = "dept.provider", configuration = DeptProviderRibbonConfig.class) // 自定义Ribbon配置
+public class StartConsumerApplication { // 沐言科技：www.yootk.com
+    public static void main(String[] args) {
+        SpringApplication.run(StartConsumerApplication.class, args);
+    }
+}
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

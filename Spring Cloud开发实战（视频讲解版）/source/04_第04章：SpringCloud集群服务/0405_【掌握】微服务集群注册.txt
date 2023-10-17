@@ -1,0 +1,110 @@
+1¡¢
+rootProject.name = 'microcloud'
+include 'common-api'
+include 'provider-dept-8001'
+include 'provider-dept-8002'
+include 'provider-dept-8003'
+include 'consumer-springboot-80'
+include 'nacos-example'
+
+
+
+2¡¢
+DROP DATABASE IF EXISTS yootk8002;
+DROP DATABASE IF EXISTS yootk8003;
+
+3¡¢
+telnet nacos-server 9848
+telnet nacos-proxy 9848
+
+4¡¢
+vi /usr/local/haproxy/haproxy.cfg
+
+5¡¢
+global
+    log         127.0.0.1 local0
+    nbproc      1
+    maxconnrate  300
+    maxcomprate  300
+    maxsessrate  500
+    chroot      /usr/local/haproxy     #²¿ÊðÂ·¾¶
+    pidfile     /usr/local/haproxy/haproxy.pid   #pidÎÄ¼þ
+    maxconn     30000
+    user        haproxy
+    group       haproxy
+    daemon
+    # turn on stats unix socket
+    stats socket /usr/local/haproxy/stats
+
+defaults
+    mode                    tcp
+    log                     global
+    option                  dontlognull
+    option                  redispatch
+    option                  http-use-htx
+    option                  logasap
+    option                  tcplog
+    retries                 3
+    #timeout http-request    100s
+    timeout queue           1m
+    timeout connect         5m
+    timeout client          5m
+    timeout server          5m
+    timeout connect         5m
+    timeout http-keep-alive 100s
+    timeout check           10s
+    maxconn                 100000
+listen admin_stats
+    stats enable
+    bind 0.0.0.0:9999 #¼à¿Ø¶Ë¿ÚÉèÖÃ
+    mode http
+    log global
+    maxconn 10
+    stats uri /admin  #µÇÂ¼¼à¿Ø×ÓÂ·¾¶ÅäÖÃ
+    stats realm welcome\ Haproxy
+    stats auth admin:admin  #¼à¿ØµÄÕËºÅÃÜÂë
+    stats admin if TRUE
+    option httplog
+    stats refresh 30s
+    stats hide-version
+
+
+frontend nacos_cluster
+        bind            :9848
+        mode            tcp
+        log             global
+        option          tcplog
+        option          dontlognull
+        option          nolinger
+        maxconn         8000
+        timeout client  30s
+        default_backend nacos_cluster_nodes
+
+backend nacos_cluster_nodes
+        mode           tcp
+        server  nacos-a nacos-cluster-a:9848 check
+        server  nacos-b nacos-cluster-b:9848 check
+        server  nacos-c nacos-cluster-c:9848 check
+
+
+6¡¢
+/usr/local/haproxy/sbin/haproxy -f /usr/local/haproxy/haproxy.cfg
+
+7¡¢
+vi /usr/local/nacos/conf/cluster.conf
+192.168.190.151:8848
+192.168.190.152:8848
+192.168.190.153:8848
+scp /usr/local/nacos/conf/cluster.conf nacos-cluster-b:/usr/local/nacos/conf/
+scp /usr/local/nacos/conf/cluster.conf nacos-cluster-c:/usr/local/nacos/conf/
+
+
+8¡¢
+DROP DATABASE nacos;
+CREATE DATABASE nacos CHARACTER SET UTF8;
+USE nacos;
+source /usr/local/src/nacos-mysql.sql
+
+9¡¢
+/usr/local/nacos/bin/startup.sh
+rm -rf /usr/local/nacos/logs/*

@@ -1,0 +1,53 @@
+1、
+// https://mvnrepository.com/artifact/com.alibaba.cloud/spring-cloud-starter-alibaba-sentinel
+implementation group: 'com.alibaba.cloud', name: 'spring-cloud-starter-alibaba-sentinel', version: '2021.1'
+
+
+2、
+project(":provider-dept-8001") {    // 部门微服务
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation(libraries.'mybatis-plus-boot-starter')
+        implementation(libraries.'mysql-connector-java')
+        implementation(libraries.'druid')
+        implementation(libraries.'springfox-boot-starter')
+        implementation('org.springframework.boot:spring-boot-starter-security')
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+3、
+spring:
+  application: # 配置应用信息
+    name: dept.provider # 是微服务的名称
+  cloud: # Cloud配置
+    sentinel: # 监控配置
+      transport: # 传输配置
+        port: 8719 # Sentinel组件启用之后默认会启动一个8719端口
+        dashboard: sentinel-server:8888 # 控制台地址
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

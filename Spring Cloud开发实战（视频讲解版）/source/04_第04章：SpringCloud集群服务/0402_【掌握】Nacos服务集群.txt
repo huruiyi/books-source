@@ -1,0 +1,65 @@
+1、
+rm -rf /usr/local/nacos/{data,logs}
+
+2、
+vi /etc/sysconfig/network-scripts/ifcfg-ens33
+
+3、
+IPADDR=192.168.190.151
+IPADDR=192.168.190.152
+IPADDR=192.168.190.153
+
+4、
+vi /etc/hostname
+
+5、
+vi /etc/hosts
+
+
+6、
+192.168.190.151 nacos-cluster-a
+192.168.190.152 nacos-cluster-b
+192.168.190.153 nacos-cluster-c
+
+7、
+cp /usr/local/nacos/conf/cluster.conf.example /usr/local/nacos/conf/cluster.conf
+
+
+8、
+vi /usr/local/nacos/conf/cluster.conf
+
+9、
+vi /usr/local/nacos/conf/cluster.conf
+
+10、
+nacos-cluster-a:8848
+nacos-cluster-b:8848
+nacos-cluster-c:8848
+
+11、
+scp /usr/local/nacos/conf/cluster.conf nacos-cluster-b:/usr/local/nacos/conf/
+scp /usr/local/nacos/conf/cluster.conf nacos-cluster-c:/usr/local/nacos/conf/
+
+12、
+vi /usr/local/nacos/bin/startup.sh
+
+13、
+JAVA_OPT="${JAVA_OPT} -Dnacos.server.ip=nacos-cluster-a"
+
+14、
+JAVA_OPT="${JAVA_OPT} -Dnacos.server.ip=nacos-cluster-b"
+JAVA_OPT="${JAVA_OPT} -Dnacos.server.ip=nacos-cluster-c"
+
+15、
+bash -f /usr/local/nacos/bin/startup.sh 
+
+16、
+DROP DATABASE nacos;
+CREATE DATABASE nacos CHARACTER SET UTF8;
+USE nacos;
+source /usr/local/src/nacos-mysql.sql
+
+17、
+192.168.190.151	nacos-cluster-a
+192.168.190.152	nacos-cluster-b
+192.168.190.153	nacos-cluster-c

@@ -1,0 +1,125 @@
+1、
+package muyan.yootk.loadbalancer.rule;
+
+import com.alibaba.cloud.nacos.NacosDiscoveryProperties;
+import com.alibaba.cloud.nacos.ribbon.ExtendBalancer;
+import com.alibaba.cloud.nacos.ribbon.NacosServer;
+import com.alibaba.nacos.api.exception.NacosException;
+import com.alibaba.nacos.api.naming.NamingService;
+import com.alibaba.nacos.api.naming.pojo.Instance;
+import com.netflix.client.config.IClientConfig;
+import com.netflix.loadbalancer.AbstractLoadBalancerRule;
+import com.netflix.loadbalancer.BaseLoadBalancer;
+import com.netflix.loadbalancer.Server;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+@Slf4j
+public class NacosClusterWeightRule extends AbstractLoadBalancerRule {
+    // 如果要想按照集群调用，那么首先一定要知道当前消费端的集群名称是什么
+    @Autowired
+    private NacosDiscoveryProperties nacosDiscoveryProperties; // 注入Nacos发现服务配置项
+    @Autowired
+    private IClientConfig clientConfig;
+
+    @Override
+    public void initWithNiwsConfig(IClientConfig clientConfig) {
+        this.clientConfig = clientConfig;
+    }
+
+    @Override
+    public Server choose(Object key) { // 核心关键
+        BaseLoadBalancer loadBalancer = (BaseLoadBalancer) super.getLoadBalancer();
+        // 如果此时没有这个调用的微服务名称，那么是无法实现最终的服务查询的
+        String name = loadBalancer.getName();// 获取服务名称
+        NamingService namingService = this.nacosDiscoveryProperties.namingServiceInstance();
+        // 获取指定服务名称的全部的实例列表数据
+        try {
+            // 根据指定的服务名称以及分组查询所有健康的服务实例列表，此时的列表包含有所有的集群信息
+            List<Instance> instances = namingService.selectInstances(name, this.nacosDiscoveryProperties.getGroup(), true);
+            // 理论上现在应该采用的是迭代的处理形式，将全部的集合列表进行迭代处理，随后进行集群名称的判断
+            List<Instance> clusterInstance = instances.stream()
+                    .filter(instance -> Objects.equals(instance.getClusterName(), this.nacosDiscoveryProperties.getClusterName()))
+                    .collect(Collectors.toList());
+            List<Instance> instancesChoose = null; // 保存最终的返回的列表
+            // 如果以上的处理可以获取指定集群名称下的全部的服务实例数据，那么就可以随意返回一个，但是如果不能够获取？
+            if (CollectionUtils.isEmpty(clusterInstance)) { // 此时集群下的实例列表为空
+                // 此时在指定集群名称下没有查找到任何的实例列表，所以就把所获取到的全部实例列表
+                instancesChoose = instances;
+            } else { // 如果已经查找到了指定集群名称下的实例列表
+               instancesChoose = clusterInstance; // 保存集群实例列表
+            }
+            // 因为最终所需要的是一个Server实例信息，所以这个时候可以考虑随机读取一个，或者按照权重返回一个
+            Instance selectedInstance = ExtendBalancer.getHostByRandomWeight2(instancesChoose);
+            return new NacosServer(selectedInstance); // 指定集群名称下的一个实例
+        } catch (NacosException e) {
+            log.error("服务实例查询时出现了错误，异常为：{}", e);
+        }
+        return null;
+    }
+}
+
+
+2、
+spring:
+  application: # 配置应用信息
+    name: consumer # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: YootkCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        register-enabled: false # 消费端不注册
+
+3、
+package muyan.yootk.config.ribbon; // 该包不在应用程序启动类的扫描包路径下
+
+import com.netflix.loadbalancer.IRule;
+import muyan.yootk.loadbalancer.rule.NacosClusterWeightRule;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration // 这个类必须使用该注解定义
+public class DeptProviderRibbonConfig {
+    @Bean // Bean注册
+    public IRule ribbonRule() { // 自定义负载均衡规则
+        return new NacosClusterWeightRule(); // 随机读取
+    }
+}
+
+
+4、
+spring:
+  application: # 配置应用信息
+    name: consumer # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanYootk # 配置集群名称
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

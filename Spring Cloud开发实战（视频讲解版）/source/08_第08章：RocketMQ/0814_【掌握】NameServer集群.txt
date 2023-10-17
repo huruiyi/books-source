@@ -1,0 +1,27 @@
+1、
+unzip /var/ftp/rocketmq-all-4.9.1-bin-release.zip -d /usr/local/
+
+2、
+mkdir /usr/local/rocketmq/logs
+
+3、
+vi /usr/local/rocketmq/bin/runserver.sh
+
+4、
+JAVA_OPT="${JAVA_OPT} -server -Xms1g -Xmx1g -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=320m"
+
+5、
+scp -r /usr/local/rocketmq nameserver-cluster-b:/usr/local/
+
+6、
+nohup /usr/local/rocketmq/bin/mqnamesrv > /usr/local/rocketmq/logs/rocketmq-namesrv.log 2>&1 &
+
+7、
+firewall-cmd --zone=public --add-port=9876/tcp --permanent
+firewall-cmd --reload
+
+8、
+
+
+9、
+

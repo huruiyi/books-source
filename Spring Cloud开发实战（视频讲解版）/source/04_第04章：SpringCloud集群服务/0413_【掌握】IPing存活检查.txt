@@ -1,0 +1,42 @@
+1、
+package com.yootk.test;
+
+import com.netflix.loadbalancer.IPing;
+import com.netflix.loadbalancer.PingUrl;
+import com.netflix.loadbalancer.Server;
+
+public class TestIPing {
+    public static void main(String[] args) {
+        String host = "provider-dept-8001"; // 服务地址
+        String uri = "/provider/dept/list"; // 服务路径
+        IPing ping = new PingUrl(false, uri);
+        // 按照正常的设计来讲应该使用的是NacosServer
+        Server server = new Server(host, 8001); // 偷懒
+        System.out.println(ping.isAlive(server)); // 测试一下服务
+    }
+}
+
+
+2、
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

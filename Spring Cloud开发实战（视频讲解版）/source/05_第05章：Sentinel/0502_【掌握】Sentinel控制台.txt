@@ -1,0 +1,31 @@
+1、
+https://github.com/alibaba/Sentinel
+
+2、
+192.168.190.160	sentinel-server
+
+3、
+vi /etc/sysconfig/network-scripts/ifcfg-ens33
+vi /etc/hostname
+vi /etc/hosts
+
+4、
+wget https://github.com/alibaba/Sentinel/releases/download/1.8.1/sentinel-dashboard-1.8.1.jar
+
+5、
+https://github.com/alibaba/Sentinel/wiki/陣崙岬
+
+6、
+java -Dserver.port=8888 -Dcsp.sentinel.dashboard.server=localhost:8888 -Dproject.name=sentinel-dashboard -Dsentinel.dashboard.auth.username=muyan -Dsentinel.dashboard.auth.password=yootk -jar /usr/local/src/sentinel-dashboard-1.8.1.jar 
+
+
+7、
+java -Dserver.port=8888 -Dcsp.sentinel.dashboard.server=localhost:8888 -Dproject.name=sentinel-dashboard -Dsentinel.dashboard.auth.username=muyan -Dsentinel.dashboard.auth.password=yootk -jar /usr/local/src/sentinel-dashboard-1.8.1.jar > /usr/local/src/sentinel.log 2>&1 &
+
+8、
+netstat -nptl
+
+9、
+firewall-cmd --zone=public --add-port=8888/tcp --permanent
+firewall-cmd --zone=public --add-port=8719/tcp --permanent
+firewall-cmd --reload

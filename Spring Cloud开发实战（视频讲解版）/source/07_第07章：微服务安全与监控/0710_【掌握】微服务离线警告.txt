@@ -1,0 +1,93 @@
+1、
+wxxgmusdafasd
+
+2、
+// https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-mail
+implementation group: 'org.springframework.boot', name: 'spring-boot-starter-mail', version: '2.5.5'
+
+
+3、
+project(":microcloud-admin-8000") {    // 部门微服务
+    dependencies {
+        implementation(libraries.'spring-boot-admin-starter-client')
+        implementation('org.springframework.boot:spring-boot-starter-mail')        implementation('org.springframework.boot:spring-boot-starter-actuator')
+        implementation('org.springframework.boot:spring-boot-starter-security')
+        implementation("org.springframework.boot:spring-boot-starter-web")
+        implementation(libraries.'spring-boot-admin-starter-server')
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+4、
+spring:
+  mail:
+    host: smtp.qq.com
+    username: 784420216@qq.com
+    password: wxxgmulpexcubcih
+  boot:
+    admin:
+      notify:
+        mail:
+          to: 784420216@qq.com
+          from: 784420216@qq.com
+
+5、
+package com.yootk.admin.config;
+
+import de.codecentric.boot.admin.server.domain.entities.InstanceRepository;
+import de.codecentric.boot.admin.server.notify.CompositeNotifier;
+import de.codecentric.boot.admin.server.notify.Notifier;
+import de.codecentric.boot.admin.server.notify.RemindingNotifier;
+import de.codecentric.boot.admin.server.notify.filter.FilteringNotifier;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+
+import java.beans.BeanProperty;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
+
+@Configuration
+public class MicroServiceNotificationConfiguration { // 定义一个警报发送配置
+    private InstanceRepository instanceRepository; // 存储实例
+    private ObjectProvider<List<Notifier>> provider; // 警报策略
+    public MicroServiceNotificationConfiguration(InstanceRepository instanceRepository,
+                                                 ObjectProvider<List<Notifier>> provider) {
+        this.instanceRepository = instanceRepository;
+        this.provider = provider;
+    }
+    @Bean
+    public FilteringNotifier getFilterNotifier() {
+        CompositeNotifier com = new CompositeNotifier(this.provider.getIfAvailable(Collections::emptyList));
+        return new FilteringNotifier(com, this.instanceRepository);
+    }
+    @Bean
+    @Primary
+    public RemindingNotifier remindingNotifier() {
+        RemindingNotifier notifier = new RemindingNotifier(getFilterNotifier(), this.instanceRepository);
+        notifier.setReminderPeriod(Duration.ofMinutes(1)); // 每分钟提醒1次
+        notifier.setCheckReminderInverval(Duration.ofSeconds(10)); // 每10秒检查一次
+        return notifier;
+    }
+}
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

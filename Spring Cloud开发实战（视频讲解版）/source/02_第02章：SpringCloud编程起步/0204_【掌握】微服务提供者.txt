@@ -1,0 +1,323 @@
+1、
+// https://mvnrepository.com/artifact/com.baomidou/mybatis-plus-boot-starter
+implementation group: 'com.baomidou', name: 'mybatis-plus-boot-starter', version: '3.4.3'
+// https://mvnrepository.com/artifact/mysql/mysql-connector-java
+implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.25'
+// https://mvnrepository.com/artifact/com.alibaba/druid
+implementation group: 'com.alibaba', name: 'druid', version: '1.2.6'
+
+
+2、
+ext.versions = [                // 定义全部的依赖库版本号
+                                springboot           : '2.2.5.RELEASE',      // SpringBoot版本号
+                                springcloud          : 'Hoxton.SR3', // SpringCloud版本号
+                                alibabacloud         : '2.2.1.RELEASE', // SpringCloudAlibaba版本号
+                                lombok               : '1.18.20', // Lombok版本号
+                                junit                : '5.6.3', // 配置JUnit测试工具的版本编号
+                                junitPlatformLauncher: '1.6.3',  // JUnit测试工具运行平台版本编号
+                                mybatisPlus          : '3.4.3', // MyBatisPlus的版本号
+                                mysql                : '8.0.25', // MySQL数据库驱动版本
+                                druid                : '1.2.6', // Druid版本号
+]
+ext.libraries = [            // 依赖库引入配置
+                             'spring-boot-gradle-plugin'        :
+                                     "org.springframework.boot:spring-boot-gradle-plugin:${versions.springboot}",
+                             'spring-cloud-dependencies'        :
+                                     "org.springframework.cloud:spring-cloud-dependencies:${versions.springcloud}",
+                             'spring-cloud-alibaba-dependencies':
+                                     "com.alibaba.cloud:spring-cloud-alibaba-dependencies:${versions.alibabacloud}",
+                             // 以下的配置为与项目用例测试有关的依赖
+                             'junit-jupiter-api'                :
+                                     "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
+                             'junit-vintage-engine'             :
+                                     "org.junit.vintage:junit-vintage-engine:${versions.junit}",
+                             'junit-jupiter-engine'             :
+                                     "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+                             'junit-platform-launcher'          :
+                                     "org.junit.platform:junit-platform-launcher:${versions.junitPlatformLauncher}",
+                             'junit-platform-engine'            :
+                                     "org.junit.platform:junit-platform-engine:${versions.junitPlatformLauncher}",
+                             'junit-jupiter-params'             :
+                                     "org.junit.jupiter:junit-jupiter-params:${versions.junit}",
+                             'junit-bom'                        : "org.junit:junit-bom:${versions.junit}",
+                             'junit-platform-commons'           :
+                                     "org.junit.platform:junit-platform-commons:${versions.junitPlatformLauncher}",
+                             // 以下的配置为Lombok组件有关的依赖
+                             'lombok'                           : "org.projectlombok:lombok:${versions.lombok}",
+                             // 以下的配置为数据库开发有关的依赖
+                             'mybatis-plus-boot-starter'        : "com.baomidou:mybatis-plus-boot-starter:${versions.mybatisPlus}",
+                             'mysql-connector-java'             : "mysql:mysql-connector-java:${versions.mysql}",
+                             'druid'                            : "com.alibaba:druid:${versions.druid}"
+]
+
+
+3、
+project(":provider-dept-8001") {    // 部门微服务
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation(libraries.'mybatis-plus-boot-starter')
+        implementation(libraries.'mysql-connector-java')
+        implementation(libraries.'druid')
+    }
+}
+
+4、
+server: # 服务端配置
+  port: 8001 # 8001端口
+mybatis-plus: # MyBatisPlus配置
+  type-aliases-package: com.yootk.provider.vo  # 别名配置
+spring:
+  datasource: # 数据源配置
+    type: com.alibaba.druid.pool.DruidDataSource    # 数据源类型
+    driver-class-name: com.mysql.cj.jdbc.Driver     # 驱动程序类
+    url: jdbc:mysql://localhost:3306/yootk8001          # 连接地址
+    username: root                                  # 用户名
+    password: mysqladmin                            # 连接密码
+    druid: # druid相关配置
+      initial-size: 5                               # 初始化连接池大小
+      min-idle: 10                                  # 最小维持连接池大小
+      max-active: 50                                # 最大支持连接池大小
+      max-wait: 60000                               # 最大等待时间
+      time-between-eviction-runs-millis: 60000      # 关闭空闲连接间隔
+      min-evictable-idle-time-millis: 30000         # 连接最小生存时间
+      validation-query: SELECT 1 FROM dual          # 状态检测
+      test-while-idle: true # 空闲时检测连接是否有效
+      test-on-borrow: false # 申请时检测连接是否有效
+      test-on-return: false # 归还时检测连接是否有效
+      pool-prepared-statements: false # PSCache缓存
+      max-pool-prepared-statement-per-connection-size: 20 # 配置PS缓存
+      filters: stat, wall, slf4j # 开启过滤
+      stat-view-servlet: # 监控界面配置
+        enabled: true # 启用druid监控界面
+        allow: 127.0.0.1      # 访问白名单
+        login-username: muyan # 用户名
+        login-password: yootk # 密码
+        reset-enable: true # 允许重置
+        url-pattern: /druid/* # 访问路径
+      web-stat-filter:
+        enabled: true # 启动URI监控
+        url-pattern: /* # 跟踪全部服务
+        exclusions: "*.js,*.gif,*.jpg,*.bmp,*.png,*.css,*.ico,/druid/*" # 跟踪排除
+      filter:
+        slf4j: # 日志
+          enabled: true # 启用SLF4j监控
+          data-source-log-enabled: true # 启用数据库日志
+          statement-executable-sql-log-enable: true # 执行日志
+          result-set-log-enabled: true # ResultSet日志启用
+        stat: # SQL监控
+          merge-sql: true # 合并统计
+          log-slow-sql: true # 慢执行记录
+          slow-sql-millis: 1 # 慢SQL执行时间
+        wall: # SQL防火墙
+          enabled: true   # SQL防火墙
+          config: # 防火墙规则
+            multi-statement-allow: true # 允许执行批量SQL
+            delete-allow: false # 禁止执行删除语句
+      aop-patterns: "com.yootk.provider.action.*,com.yootk.provider.service.*,com.yootk.provider.dao.*" # Spring监控
+
+5、
+package com.yootk.provider.config;
+
+import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class MyBatisPlusConfig { // MybatisPlus配置类
+    @Bean
+    public MybatisPlusInterceptor getMybatisPlusInterceptor() {
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();	// 拦截器
+        interceptor.addInnerInterceptor(
+                new PaginationInnerInterceptor(DbType.MYSQL)); 	// 分页处理
+        return interceptor;
+    }
+}
+
+
+6、
+package com.yootk.provider.vo;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+@TableName("dept")
+@Data // Lombok代码生成
+public class Dept { // 这个类所需要追加MBP所需要的注解
+    @TableId(type = IdType.AUTO) // 采用自动增长列配置
+    private Long deptno; // 与deptno字段映射
+    private String dname;
+    private String loc;
+}
+
+
+7、
+package com.yootk.provider.dao;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.yootk.provider.vo.Dept;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface IDeptDAO extends BaseMapper<Dept> { // DAO接口开发完成
+}
+
+
+8、
+package com.yootk.provider.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.common.util.DeepBeanUtils;
+import com.yootk.provider.dao.IDeptDAO;
+import com.yootk.provider.vo.Dept;
+import com.yootk.service.IDeptService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class DeptServiceImpl implements IDeptService {
+    @Autowired
+    private IDeptDAO deptDAO;
+    @Override
+    public DeptDTO get(long id) {
+        DeptDTO dto = new DeptDTO(); // 实例化传输对象
+        // 在本地端通过了VO类实现了数据的加载，随后将此数据拷贝到DTO对象之中
+        BeanUtils.copyProperties(this.deptDAO.selectById(id), dto); // 属性拷贝
+        return dto;
+    }
+
+    @Override
+    public boolean add(DeptDTO dto) {
+        Dept dept = new Dept(); // 数据层最终需要的是一个VO类型
+        BeanUtils.copyProperties(dto, dept);
+        return this.deptDAO.insert(dept) > 0; // 更新行数大于0
+    }
+
+    @Override
+    public List<DeptDTO> list() {
+        QueryWrapper<Dept> wrapper = new QueryWrapper<>();
+        List<DeptDTO> allDepts = DeepBeanUtils.copyListProperties(
+                this.deptDAO.selectList(wrapper), DeptDTO::new); // 集合数据拷贝
+        return allDepts;
+    }
+
+    @Override
+    public Map<String, Object> split(int currentPage, int lineSize, String column, String keyword) {
+        QueryWrapper<Dept> wrapper = new QueryWrapper<>();
+        wrapper.like(column, keyword); // 设置模糊查询操作
+        int count = this.deptDAO.selectCount(wrapper); // 统计个数
+        // 实现数据的查询处理
+        IPage<Dept> page = this.deptDAO.selectPage(new Page<>(currentPage, lineSize, count), wrapper);
+        Map<String, Object> map = new HashMap<>(); // 包装返回结果
+        map.put("allDepts", DeepBeanUtils.copyListProperties(page.getRecords(), DeptDTO::new));
+        map.put("allRecorders", page.getTotal());
+        map.put("allPages", page.getPages());
+        return map;
+    }
+}
+
+
+9、
+package com.yootk.provider;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StartProviderDept8001Application {
+    public static void main(String[] args) {
+        SpringApplication.run(StartProviderDept8001Application.class, args);
+    }
+}
+
+10、
+package com.yootk.test;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.provider.StartProviderDept8001Application;
+import com.yootk.service.IDeptService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.web.WebAppConfiguration;
+
+import java.util.Map;
+
+@ExtendWith(SpringExtension.class)
+@WebAppConfiguration
+@SpringBootTest(classes = StartProviderDept8001Application.class)
+public class TestDeptService {
+    @Autowired
+    private IDeptService deptService; // 注入业务接口对象
+    @Test
+    public void testGet() {
+        System.out.println(this.deptService.get(1));
+    }
+    @Test
+    public void testList() {
+        System.out.println(this.deptService.list());
+    }
+    @Test
+    public void testAdd() {
+        DeptDTO dto = new DeptDTO();
+        dto.setDname("公益部");
+        dto.setLoc("洛阳");
+        System.out.println(this.deptService.add(dto));
+    }
+    @Test
+    public void testSplit() {
+        Map<String, Object> map = this.deptService.split(1, 2, "dname", "");
+        System.out.println(map);
+    }
+}
+
+11、
+package com.yootk.provider.action;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.service.IDeptService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/provider/dept/*") // 微服务提供者父路径
+public class DeptAction {
+    @Autowired
+    private IDeptService deptService;
+    @GetMapping("get/{id}")
+    public Object get(@PathVariable("id") long id) {
+        return this.deptService.get(id);
+    }
+    @PostMapping("add")
+    public Object add(DeptDTO deptDTO) {    // 后面会修改参数模式为JSON
+        return this.deptService.add(deptDTO);
+    }
+    @GetMapping("list")
+    public Object list() {
+        return this.deptService.list();
+    }
+    @GetMapping("split")
+    public Object split(int cp, int ls, String col, String kw) {
+        return this.deptService.split(cp, ls, col, kw);
+    }
+}
+
+12、
+jar { enabled = true} // 允许打包为jar文件
+bootJar { enabled = false } // 不允许打包为Boot执行文件
+javadocTask { enabled = false } // 不需要打包为doc文件
+
+13、provider-dept-8001:8001/provider/dept/get/1

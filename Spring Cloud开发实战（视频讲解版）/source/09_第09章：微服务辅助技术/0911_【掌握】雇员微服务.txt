@@ -1,0 +1,387 @@
+1、
+DROP DATABASE IF EXISTS yootk8006;
+CREATE DATABASE yootk8006 CHARACTER SET UTF8;
+USE yootk8006;
+CREATE TABLE emp (
+    empno     BIGINT,
+    ename     VARCHAR(50),
+    salary    DOUBLE,
+    deptno      BIGINT,
+    CONSTRAINT pk_empno PRIMARY KEY(empno)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+INSERT INTO emp(empno, ename, salary, deptno) VALUES (7369, '李兴华', 9500, 1);
+INSERT INTO emp(empno, ename, salary, deptno) VALUES (7566, '李沐言', 9800, 1);
+INSERT INTO emp(empno, ename, salary, deptno) VALUES (7878, '孙倩', 5800, 2);
+INSERT INTO emp(empno, ename, salary, deptno) VALUES (7888, '王塞塞', 6800, 2);
+INSERT INTO emp(empno, ename, salary, deptno) VALUES (7659, '程优', 5800, 3);
+INSERT INTO emp(empno, ename, salary, deptno) VALUES (7900, '王科', 3200, 4);
+INSERT INTO emp(empno, ename, salary, deptno) VALUES (7839, '金拓', 4900, 5);
+INSERT INTO emp(empno, ename, salary, deptno) VALUES (7869, '郭竹音', 8900, 5);
+COMMIT;
+
+
+2、
+project(":provider-emp-8006") {    // 雇员微服务
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation(libraries.'mybatis-plus-boot-starter')
+        implementation(libraries.'mysql-connector-java')
+        implementation(libraries.'druid')
+        implementation(libraries.'springfox-boot-starter')
+        implementation('org.springframework.boot:spring-boot-starter-security')
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+3、
+package com.yootk.common.dto;
+
+import lombok.Data;
+
+import java.io.Serializable;
+
+@Data
+public class EmpDTO implements Serializable { // 雇员传输类
+    private Long empno;
+    private String ename;
+    private Double salary;
+    private Long deptno;
+}
+
+
+4、
+package com.yootk.service;
+
+import com.yootk.common.dto.EmpDTO;
+import com.yootk.service.config.FeignConfig;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.PostMapping;
+@FeignClient(value = "microcloud.gateway", // 使用网关的名称进行访问
+        configuration = FeignConfig.class)// 定义要访问的微服务实例名称
+public interface IEmpService { // 需要考虑到JWT的设计问题
+    @PostMapping("/provider/emp/add") // 映射地址
+    public boolean add(EmpDTO dto); // 雇员增加操作
+}
+
+
+5、
+server: # 服务端配置
+  port: 8006 # 8006端口
+mybatis-plus: # MyBatisPlus配置
+  type-aliases-package: com.yootk.provider.vo  # 别名配置
+spring:
+  application: # 配置应用信息
+    name: emp.provider # 是微服务的名称
+  cloud: # Cloud配置
+    sentinel: # 监控配置
+      transport: # 传输配置
+        port: 8719 # Sentinel组件启用之后默认会启动一个8719端口
+        dashboard: sentinel-server:8888 # 控制台地址
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        weight: 80
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        metadata:  # 根据自身的需要配置元数据
+          version: 1.0 # 自定义元数据项
+          company: 沐言科技 # 自定义元数据项
+          url: www.yootk.com # 自定义元数据项
+          author: 李兴华（爆可爱的小李老师） # 自定义元数据项
+  datasource: # 数据源配置
+    type: com.alibaba.druid.pool.DruidDataSource    # 数据源类型
+    driver-class-name: com.mysql.cj.jdbc.Driver     # 驱动程序类
+    url: jdbc:mysql://localhost:3306/yootk8006          # 连接地址
+    username: root                                  # 用户名
+    password: mysqladmin                            # 连接密码
+    druid: # druid相关配置
+      initial-size: 5                               # 初始化连接池大小
+      min-idle: 10                                  # 最小维持连接池大小
+      max-active: 50                                # 最大支持连接池大小
+      max-wait: 60000                               # 最大等待时间
+      time-between-eviction-runs-millis: 60000      # 关闭空闲连接间隔
+      min-evictable-idle-time-millis: 30000         # 连接最小生存时间
+      validation-query: SELECT 1 FROM dual          # 状态检测
+      test-while-idle: true # 空闲时检测连接是否有效
+      test-on-borrow: false # 申请时检测连接是否有效
+      test-on-return: false # 归还时检测连接是否有效
+      pool-prepared-statements: false # PSCache缓存
+      max-pool-prepared-statement-per-connection-size: 20 # 配置PS缓存
+      filters: stat, wall, slf4j # 开启过滤
+      stat-view-servlet: # 监控界面配置
+        enabled: true # 启用druid监控界面
+        allow: 127.0.0.1      # 访问白名单
+        login-username: muyan # 用户名
+        login-password: yootk # 密码
+        reset-enable: true # 允许重置
+        url-pattern: /druid/* # 访问路径
+      web-stat-filter:
+        enabled: true # 启动URI监控
+        url-pattern: /* # 跟踪全部服务
+        exclusions: "*.js,*.gif,*.jpg,*.bmp,*.png,*.css,*.ico,/druid/*" # 跟踪排除
+      filter:
+        slf4j: # 日志
+          enabled: true # 启用SLF4j监控
+          data-source-log-enabled: true # 启用数据库日志
+          statement-executable-sql-log-enable: true # 执行日志
+          result-set-log-enabled: true # ResultSet日志启用
+        stat: # SQL监控
+          merge-sql: true # 合并统计
+          log-slow-sql: true # 慢执行记录
+          slow-sql-millis: 1 # 慢SQL执行时间
+        wall: # SQL防火墙
+          enabled: true   # SQL防火墙
+          config: # 防火墙规则
+            multi-statement-allow: true # 允许执行批量SQL
+            delete-allow: false # 禁止执行删除语句
+      aop-patterns: "com.yootk.provider.action.*,com.yootk.provider.service.*,com.yootk.provider.dao.*" # Spring监控
+
+
+6、
+server: # 服务端配置
+  port: 8006 # 8006端口
+mybatis-plus: # MyBatisPlus配置
+  type-aliases-package: com.yootk.provider.vo  # 别名配置
+spring:
+  application: # 配置应用信息
+    name: emp.provider # 是微服务的名称
+  cloud: # Cloud配置
+    sentinel: # 监控配置
+      transport: # 传输配置
+        port: 8719 # Sentinel组件启用之后默认会启动一个8719端口
+        dashboard: sentinel-server:8888 # 控制台地址
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        weight: 80
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        metadata:  # 根据自身的需要配置元数据
+          version: 1.0 # 自定义元数据项
+          company: 沐言科技 # 自定义元数据项
+          url: www.yootk.com # 自定义元数据项
+          author: 李兴华（爆可爱的小李老师） # 自定义元数据项
+  datasource: # 数据源配置
+    type: com.alibaba.druid.pool.DruidDataSource    # 数据源类型
+    driver-class-name: com.mysql.cj.jdbc.Driver     # 驱动程序类
+    url: jdbc:mysql://localhost:3306/yootk8006          # 连接地址
+    username: root                                  # 用户名
+    password: mysqladmin                            # 连接密码
+    druid: # druid相关配置
+      initial-size: 5                               # 初始化连接池大小
+      min-idle: 10                                  # 最小维持连接池大小
+      max-active: 50                                # 最大支持连接池大小
+      max-wait: 60000                               # 最大等待时间
+      time-between-eviction-runs-millis: 60000      # 关闭空闲连接间隔
+      min-evictable-idle-time-millis: 30000         # 连接最小生存时间
+      validation-query: SELECT 1 FROM dual          # 状态检测
+      test-while-idle: true # 空闲时检测连接是否有效
+      test-on-borrow: false # 申请时检测连接是否有效
+      test-on-return: false # 归还时检测连接是否有效
+      pool-prepared-statements: false # PSCache缓存
+      max-pool-prepared-statement-per-connection-size: 20 # 配置PS缓存
+      filters: stat, wall, slf4j # 开启过滤
+      stat-view-servlet: # 监控界面配置
+        enabled: true # 启用druid监控界面
+        allow: 127.0.0.1      # 访问白名单
+        login-username: muyan # 用户名
+        login-password: yootk # 密码
+        reset-enable: true # 允许重置
+        url-pattern: /druid/* # 访问路径
+      web-stat-filter:
+        enabled: true # 启动URI监控
+        url-pattern: /* # 跟踪全部服务
+        exclusions: "*.js,*.gif,*.jpg,*.bmp,*.png,*.css,*.ico,/druid/*" # 跟踪排除
+      filter:
+        slf4j: # 日志
+          enabled: true # 启用SLF4j监控
+          data-source-log-enabled: true # 启用数据库日志
+          statement-executable-sql-log-enable: true # 执行日志
+          result-set-log-enabled: true # ResultSet日志启用
+        stat: # SQL监控
+          merge-sql: true # 合并统计
+          log-slow-sql: true # 慢执行记录
+          slow-sql-millis: 1 # 慢SQL执行时间
+        wall: # SQL防火墙
+          enabled: true   # SQL防火墙
+          config: # 防火墙规则
+            multi-statement-allow: true # 允许执行批量SQL
+            delete-allow: false # 禁止执行删除语句
+      aop-patterns: "com.yootk.provider.action.*,com.yootk.provider.service.*,com.yootk.provider.dao.*" # Spring监控
+
+
+7、
+package com.yootk.provider.vo;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+@TableName("emp") // 映射表名称
+@Data
+public class Emp {
+    @TableId
+    private Long empno;
+    private String ename;
+    private double salary;
+    private Long deptno;
+}
+
+
+8、
+package com.yootk.provider.dao;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.yootk.provider.vo.Emp;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface IEmpDAO extends BaseMapper<Emp> {
+}
+
+
+9、
+package com.yootk.provider.service.impl;
+
+import com.yootk.common.dto.EmpDTO;
+import com.yootk.common.util.DeepBeanUtils;
+import com.yootk.provider.dao.IEmpDAO;
+import com.yootk.provider.vo.Emp;
+import com.yootk.service.IEmpService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class EmpServiceImpl implements IEmpService {
+    @Autowired
+    private IEmpDAO empDAO;
+    @Override
+    public boolean add(EmpDTO dto) {
+        Emp empVO = new Emp(); // 实例化VO对象
+        DeepBeanUtils.copyProperties(dto, empVO); // 属性的拷贝
+        return this.empDAO.insert(empVO) > 0;
+    }
+}
+
+10、
+package com.yootk.provider.action;
+
+import com.yootk.common.dto.EmpDTO;
+import com.yootk.service.IEmpService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/provider/emp/*")
+public class EmpAction {
+    @Autowired
+    private IEmpService empService;
+    @PostMapping("add")
+    public Object add(@RequestBody EmpDTO empDTO) {
+        return this.empService.add(empDTO);
+    }
+}
+
+
+11、
+package com.yootk.provider;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class StartProviderEmp8006Application {
+    public static void main(String[] args) {
+        SpringApplication.run(StartProviderEmp8006Application.class, args);
+    }
+}
+
+12、
+startup.cmd -m standalone
+java -Dserver.port=8888 -Dcsp.sentinel.dashboard.server=localhost:8888 -Dproject.name=sentinel-dashboard -Dsentinel.dashboard.auth.username=muyan -Dsentinel.dashboard.auth.password=yootk -jar sentinel-dashboard.jar
+
+13、
+127.0.0.1	provider-emp-8006
+
+14、
+
+[
+  {
+    "id": "dept",
+    "uri": "lb://dept.provider",
+    "order": 1,
+    "predicates": [
+      {
+        "name": "Path",
+        "args": {
+          "pattern": "/provider/dept/**"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "name": "AddRequestHeader",
+        "args": {
+          "_genkey_0": "Request-Token-Muyan",
+          "_genkey_1": "www.yootk.com"
+        }
+      }
+    ]
+  },
+  {
+    "id": "emp",
+    "uri": "lb://emp.provider",
+    "order": 1,
+    "predicates": [
+      {
+        "name": "Path",
+        "args": {
+          "pattern": "/provider/emp/**"
+        }
+      }
+    ]
+  },
+  {
+    "id": "token",
+    "uri": "lb://token.provider",
+    "order": 1,
+    "predicates": [
+      {
+        "name": "Path",
+        "args": {
+          "pattern": "/token/**"
+        }
+      }
+    ]
+  }
+]
+
+
+12、
+{
+    "empno": 98,
+    "ename": "无奈的小李",
+    "salary": 802.23,
+    "deptno": 1
+}

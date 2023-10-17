@@ -1,0 +1,75 @@
+1、
+package com.alibaba.csp.sentinel.annotation.aspectj;
+public abstract class AbstractSentinelAspectSupport {
+    protected String getResourceName(String resourceName, /*@NonNull*/ Method method) {
+        if (StringUtil.isNotBlank(resourceName)) { // 判断名称是否为空
+            return resourceName; // 直接返回一个具体的名称
+        }
+        return MethodUtil.resolveMethodName(method); // 根据方法来解析名称
+    }
+    protected Method resolveMethod(ProceedingJoinPoint joinPoint) { // AOP处理解析
+        MethodSignature signature = (MethodSignature)joinPoint.getSignature();
+        Class<?> targetClass = joinPoint.getTarget().getClass();
+        Method method = getDeclaredMethodFor(targetClass, signature.getName(),
+            signature.getMethod().getParameterTypes());
+        if (method == null) {
+            throw new IllegalStateException("Cannot resolve target method: " + signature.getMethod().getName());
+        }
+        return method;
+    }
+}
+
+
+2、
+public static String resolveMethodName(Method method) {
+    if (method == null) { // 没有传入Method对象实例
+        throw new IllegalArgumentException("Null method");
+    }
+    String methodName = methodNameMap.get(method); // 获取方法的名称
+    if (methodName == null) { // 方法名称为空
+        synchronized (LOCK) { // 解析的时候需要同步处理
+            methodName = methodNameMap.get(method); // 继续进行解析处理
+            if (methodName == null) {
+                StringBuilder sb = new StringBuilder();
+                String className = method.getDeclaringClass().getName();// Class名称
+                String name = method.getName(); // 方法名称
+                Class<?>[] params = method.getParameterTypes();// 参数的信息
+                sb.append(className).append(":").append(name);
+                sb.append("(");
+                int paramPos = 0;
+                for (Class<?> clazz : params) {
+                    sb.append(clazz.getCanonicalName());
+                    if (++paramPos < params.length) {
+                        sb.append(",");
+                    }
+                }
+                sb.append(")");
+                methodName = sb.toString();
+                methodNameMap.put(method, methodName); // 名称信息保存在了Map集合之中
+            }
+        }
+    }
+    return methodName;
+}
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

@@ -1,0 +1,186 @@
+1、
+package com.yootk.service.impl;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.service.IDeptMessageService;
+import org.apache.rocketmq.spring.support.RocketMQHeaders;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class DeptMessageServiceImpl implements IDeptMessageService {
+    @Autowired
+    private MessageChannel output; // 消息发送通道
+    @Override
+    public void sendMessage(DeptDTO dto) {
+        {   // 发送第一条消息，该消息会附加有tag标签
+            Map<String,Object> headers = new HashMap<>(); // 定义头信息
+            headers.put("author", "李兴华"); // 附加信息
+            headers.put("李兴华编程训练营", "edu.yootk.com"); // 附加信息
+            headers.put(RocketMQHeaders.TAGS, "dept"); // 设置操作的标签
+            dto.setLoc("Tag消息"); // 修改一下消息的标记
+            Message message = MessageBuilder.createMessage(dto, new MessageHeaders(headers));
+            this.output.send(message); // 消息发送
+        }
+        {   // 发送第二条消息，该消息将传递消息识别码KEYS
+            Map<String,Object> headers = new HashMap<>(); // 定义头信息
+            headers.put("author", "李兴华"); // 附加信息
+            headers.put("李兴华编程训练营", "edu.yootk.com"); // 附加信息
+            headers.put(RocketMQHeaders.KEYS, "dept-key"); // 设置操作的标签
+            dto.setLoc("Keys消息"); // 修改一下消息的标记
+            Message message = MessageBuilder.createMessage(dto, new MessageHeaders(headers));
+            this.output.send(message); // 消息发送
+        }
+        {   // 发送第三条消息，该消息将传递消息判断处理（SQL92判断）
+            Map<String,Object> headers = new HashMap<>(); // 定义头信息
+            headers.put("author", "李兴华"); // 附加信息
+            headers.put("李兴华编程训练营", "edu.yootk.com"); // 附加信息
+            headers.put("level", "10"); // 设置操作的标签
+            dto.setLoc("SQL92消息"); // 修改一下消息的标记
+            Message message = MessageBuilder.createMessage(dto, new MessageHeaders(headers));
+            this.output.send(message); // 消息发送
+        }
+    }
+}
+
+
+2、
+package com.yootk.channel;
+
+import org.springframework.cloud.stream.annotation.Input;
+import org.springframework.messaging.SubscribableChannel;
+
+public interface YootkSink { // 创建自定义Sink
+    String INPUT_TAG = "inputTag"; // 配置的Sink名称一定要与application.yml定义匹配
+    String INPUT_KEYS = "inputKeys"; // 配置的Sink名称一定要与application.yml定义匹配
+    String INPUT_SQL92 = "inputSQL92"; // 配置的Sink名称一定要与application.yml定义匹配
+    @Input(YootkSink.INPUT_TAG)
+    SubscribableChannel inputTag();
+    @Input(YootkSink.INPUT_KEYS)
+    SubscribableChannel inputKeys();
+    @Input(YootkSink.INPUT_SQL92)
+    SubscribableChannel inputSQL92();
+}
+
+
+
+3、
+spring:
+  cloud:
+    stream:
+      rocketmq:
+        binder:
+          name-server: rocketmq-server:9876 # NameServer地址
+        bindings: # 通道的具体绑定配置
+          inputTag:
+            consumer:
+              tags: dept||emp
+          inputKeys:
+            consumer:
+              keys: dept-key
+          inputSQL92:
+            consumer:
+              sql: 'level BETWEEN 8 AND 12'
+      bindings:
+        inputTag: # 编写自定义通道
+          destination: TopicSSC  # 消息主题
+          group: scs-producer-group-tag # 生产组
+          access-key: RocketMQMuyan # 用户名
+          secret-key: helloyootk # 密码
+        inputKeys: # 编写自定义通道
+          destination: TopicSSC # 消息主题
+          group: scs-producer-group-keys # 生产组
+          access-key: RocketMQMuyan # 用户名
+          secret-key: helloyootk # 密码
+        inputSQL92: # 编写自定义通道
+          destination: TopicSSC  # 消息主题
+          group: scs-producer-group-sql92 # 生产组
+          access-key: RocketMQMuyan # 用户名
+          secret-key: helloyootk # 密码
+
+4、
+package com.yootk;
+
+import com.yootk.channel.YootkSink;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.stream.annotation.EnableBinding;
+import org.springframework.cloud.stream.messaging.Sink;
+
+@SpringBootApplication
+@EnableBinding(YootkSink.class)
+public class StartRocketMQConsumerApplication { // 启动消息生产者服务
+    public static void main(String[] args) {
+        SpringApplication.run(StartRocketMQConsumerApplication.class, args);
+    }
+}
+
+
+5、
+package com.yootk.service;
+
+import com.yootk.channel.YootkSink;
+import com.yootk.common.dto.DeptDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.stream.annotation.StreamListener;
+import org.springframework.messaging.Message;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j // 进行日志的输出
+public class DeptMessageListener { // 部门消息监听
+    @StreamListener(YootkSink.INPUT_TAG) // 绑定SCS的消费注解
+    public void receive(Message<DeptDTO> message) { // 实现消息监听处理
+        log.info("【消息头信息】{}", message.getHeaders()); // 接收消息的主题
+        log.info("【消息内容】{}", message.getPayload()); // 接收消息的主题
+    }
+}
+
+
+
+6、
+package com.yootk.service;
+
+import com.yootk.channel.YootkSink;
+import com.yootk.common.dto.DeptDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.stream.annotation.StreamListener;
+import org.springframework.messaging.Message;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j // 进行日志的输出
+public class DeptMessageListener { // 部门消息监听
+    @StreamListener(YootkSink.INPUT_TAG) // 绑定SCS的消费注解
+    public void receiveTag(Message<DeptDTO> message) { // 实现消息监听处理
+        log.info("【TAG消息头信息】{}", message.getHeaders()); // 接收消息的主题
+        log.info("【TAG消息内容】{}", message.getPayload()); // 接收消息的主题
+    }
+    @StreamListener(YootkSink.INPUT_KEYS) // 绑定SCS的消费注解
+    public void receiveKeys(Message<DeptDTO> message) { // 实现消息监听处理
+        log.info("【KEYS消息头信息】{}", message.getHeaders()); // 接收消息的主题
+        log.info("【KEYS消息内容】{}", message.getPayload()); // 接收消息的主题
+    }
+    @StreamListener(YootkSink.INPUT_SQL92) // 绑定SCS的消费注解
+    public void receiveSQL92(Message<DeptDTO> message) { // 实现消息监听处理
+        log.info("【SQL92消息头信息】{}", message.getHeaders()); // 接收消息的主题
+        log.info("【SQL92消息内容】{}", message.getPayload()); // 接收消息的主题
+    }
+}
+
+
+7、
+
+
+8、
+
+
+9、
+

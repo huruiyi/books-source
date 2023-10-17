@@ -1,0 +1,1077 @@
+1、
+git clone https://github.com/seata/seata.git
+
+2、
+seata\saga\seata-saga-statemachine-designer
+
+3、npm install
+
+4、npm start
+
+5、
+{
+  "StateMachine": {
+    "Name": "CompanyService",
+    "Comment": "公司人事业务",
+    "Version": "0.0.1"
+  }
+}
+
+6、
+{
+  "ServiceName": "deptSaga",
+  "ServiceMethod": "reduce",
+  "Input": [
+    "$.[businessKey]",
+    "$.[dept]"
+  ],
+  "Output": {
+    "deptServiceReduceResult": "$.#root"
+  },
+  "Status": {
+    "#root == true": "SU",
+    "#root == false": "FA",
+    "#Exception{java.lang.Throwable}": "UN"
+  },
+  "Retry": []
+}
+
+7、
+{
+  "ErrorCode": "500",
+  "Message": "业务信息错误，人事数据增加失败"
+}
+
+8、
+
+{
+  "ServiceName": "deptSaga",
+  "ServiceMethod": "compensateReduce",
+  "Input": [
+    "$.[businessKey]",
+    "$.[dept]"
+  ],
+  "Output": {
+"deptServiceCompensationResult": "$.#root"
+},
+  "Status": {
+"#root == true": "SU",
+    "#root == false": "FA",
+    "#Exception{java.lang.Throwable}": "UN"
+},
+  "Retry": []
+}
+
+9、
+{
+  "ServiceName": "empSaga",
+  "ServiceMethod": "reduce",
+  "Input": [
+    "$.[businessKey]",
+    "$.[emp]"
+  ],
+  "Output": {
+    "empServiceReduceResult": "$.#root"
+  },
+  "Status": {
+    "#root == true": "SU",
+    "#root == false": "FA",
+    "#Exception{java.lang.Throwable}": "UN"
+  },
+  "Retry": []
+}
+
+10、
+{
+  "ServiceName": "empSaga",
+  "ServiceMethod": "compensateReduce",
+  "Input": [
+    "$.[businessKey]",
+    "$.[emp]"
+  ],
+  "Output": {
+    "empServiceCompensationResult": "$.#root"
+  },
+  "Status": {
+    "#root == true": "SU",
+    "#root == false": "FA",
+    "#Exception{java.lang.Throwable}": "UN"
+  },
+  "Retry": []
+}
+
+11、
+{
+  "Expression": "[empServiceReduceResult]==true",
+  "Next": "SuccessHandle"
+}
+
+12、
+{
+  "nodes": [
+    {
+      "type": "node",
+      "size": "72*72",
+      "shape": "flow-circle",
+      "color": "#FA8C16",
+      "label": "人事业务",
+      "stateId": "Start1",
+      "stateType": "Start",
+      "stateProps": {
+        "StateMachine": {
+          "Name": "CompanyService",
+          "Comment": "公司人事业务",
+          "Version": "0.0.1"
+        }
+      },
+      "x": 575.6666564941406,
+      "y": 280.99999618530273,
+      "id": "dea8dc26",
+      "index": 0
+    },
+    {
+      "type": "node",
+      "size": "110*48",
+      "shape": "flow-rect",
+      "color": "#1890FF",
+      "label": "部门业务",
+      "stateId": "DeptServiceTask",
+      "stateType": "ServiceTask",
+      "stateProps": {
+        "ServiceName": "deptSaga",
+        "ServiceMethod": "reduce",
+        "Input": [
+          "$.[businessKey]",
+          "$.[dept]"
+        ],
+        "Output": {
+          "deptServiceReduceResult": "$.#root"
+        },
+        "Status": {
+          "#root == true": "SU",
+          "#root == false": "FA",
+          "#Exception{java.lang.Throwable}": "UN"
+        },
+        "Retry": []
+      },
+      "x": 575.6666564941406,
+      "y": 385.49999618530273,
+      "id": "15b79f30",
+      "index": 1
+    },
+    {
+      "type": "node",
+      "size": "39*39",
+      "shape": "flow-circle",
+      "color": "red",
+      "label": "部门异常",
+      "stateId": "Catch1",
+      "stateType": "Catch",
+      "x": 637.0555572509766,
+      "y": 384.88888931274414,
+      "id": "89b2c29f"
+    },
+    {
+      "type": "node",
+      "size": "110*48",
+      "shape": "flow-capsule",
+      "color": "red",
+      "label": "部门补偿触发",
+      "stateId": "DeptCompensationTrigger",
+      "stateType": "CompensationTrigger",
+      "x": 833.5555572509766,
+      "y": 384.88888931274414,
+      "id": "f483f1ad"
+    },
+    {
+      "type": "node",
+      "size": "72*72",
+      "shape": "flow-circle",
+      "color": "red",
+      "label": "业务失败",
+      "stateId": "Fail1",
+      "stateType": "Fail",
+      "stateProps": {
+        "ErrorCode": "500",
+        "Message": "业务信息错误，人事数据增加失败"
+      },
+      "x": 979.0555572509766,
+      "y": 503,
+      "id": "144efa41"
+    },
+    {
+      "type": "node",
+      "size": "80*72",
+      "shape": "flow-rhombus",
+      "color": "#13C2C2",
+      "label": "部门判断",
+      "stateId": "Choice1",
+      "stateType": "Choice",
+      "x": 575.6666564941406,
+      "y": 488,
+      "id": "fbf4f55f"
+    },
+    {
+      "type": "node",
+      "size": "110*48",
+      "shape": "flow-capsule",
+      "color": "#722ED1",
+      "label": "部门业务补偿",
+      "stateId": "deptCompensation",
+      "stateType": "Compensation",
+      "stateProps": {
+        "ServiceName": "deptSaga",
+        "ServiceMethod": "compensateReduce",
+        "Input": [
+          "$.[businessKey]",
+          "$.[dept]"
+        ],
+        "Output": {
+          "deptServiceCompensationResult": "$.#root"
+        },
+        "Status": {
+          "#root == true": "SU",
+          "#root == false": "FA",
+          "#Exception{java.lang.Throwable}": "UN"
+        },
+        "Retry": []
+      },
+      "x": 358.05555725097656,
+      "y": 384.99999618530273,
+      "id": "8265a130"
+    },
+    {
+      "type": "node",
+      "size": "110*48",
+      "shape": "flow-rect",
+      "color": "#1890FF",
+      "label": "雇员业务",
+      "stateId": "EmpServiceTask",
+      "stateType": "ServiceTask",
+      "stateProps": {
+        "ServiceName": "empSaga",
+        "ServiceMethod": "reduce",
+        "Input": [
+          "$.[businessKey]",
+          "$.[emp]"
+        ],
+        "Output": {
+          "empServiceReduceResult": "$.#root"
+        },
+        "Status": {
+          "#root == true": "SU",
+          "#root == false": "FA",
+          "#Exception{java.lang.Throwable}": "UN"
+        },
+        "Retry": []
+      },
+      "x": 576.1666564941406,
+      "y": 598.5,
+      "id": "25e702f3"
+    },
+    {
+      "type": "node",
+      "size": "39*39",
+      "shape": "flow-circle",
+      "color": "red",
+      "label": "雇员异常",
+      "stateId": "Catch3",
+      "stateType": "Catch",
+      "x": 637.0555572509766,
+      "y": 599,
+      "id": "6da2698d"
+    },
+    {
+      "type": "node",
+      "size": "110*48",
+      "shape": "flow-capsule",
+      "color": "red",
+      "label": "雇员补偿触发",
+      "stateId": "EmpCompensationTrigger",
+      "stateType": "CompensationTrigger",
+      "x": 837.0555572509766,
+      "y": 599,
+      "id": "4896f850"
+    },
+    {
+      "type": "node",
+      "size": "80*72",
+      "shape": "flow-rhombus",
+      "color": "#13C2C2",
+      "label": "雇员判断",
+      "stateId": "Choice2",
+      "stateType": "Choice",
+      "x": 576.0555572509766,
+      "y": 697,
+      "id": "38e334a1"
+    },
+    {
+      "type": "node",
+      "size": "110*48",
+      "shape": "flow-capsule",
+      "color": "#722ED1",
+      "label": "雇员业务补偿",
+      "stateId": "EmpCompensation",
+      "stateType": "Compensation",
+      "stateProps": {
+        "ServiceName": "empSaga",
+        "ServiceMethod": "compensateReduce",
+        "Input": [
+          "$.[businessKey]",
+          "$.[emp]"
+        ],
+        "Output": {
+          "empServiceCompensationResult": "$.#root"
+        },
+        "Status": {
+          "#root == true": "SU",
+          "#root == false": "FA",
+          "#Exception{java.lang.Throwable}": "UN"
+        },
+        "Retry": []
+      },
+      "x": 358.05555725097656,
+      "y": 598,
+      "id": "318a6abf"
+    },
+    {
+      "type": "node",
+      "size": "72*72",
+      "shape": "flow-circle",
+      "color": "#05A465",
+      "label": "业务成功",
+      "stateId": "SuccessHandle",
+      "stateType": "Succeed",
+      "x": 357.55555725097656,
+      "y": 697,
+      "id": "5ae32569"
+    }
+  ],
+  "edges": [
+    {
+      "source": "4896f850",
+      "sourceAnchor": 1,
+      "target": "144efa41",
+      "targetAnchor": 2,
+      "id": "41058926",
+      "shape": "flow-polyline-round"
+    },
+    {
+      "source": "dea8dc26",
+      "sourceAnchor": 2,
+      "target": "15b79f30",
+      "targetAnchor": 0,
+      "id": "a76175e7",
+      "index": 2
+    },
+    {
+      "source": "89b2c29f",
+      "sourceAnchor": 1,
+      "target": "f483f1ad",
+      "targetAnchor": 3,
+      "id": "8d5c20b9",
+      "shape": "flow-polyline-round",
+      "stateProps": {
+        "Exceptions": [
+          "java.lang.Throwable"
+        ]
+      }
+    },
+    {
+      "source": "f483f1ad",
+      "sourceAnchor": 1,
+      "target": "144efa41",
+      "targetAnchor": 0,
+      "id": "31c116f0",
+      "shape": "flow-polyline-round",
+      "label": ""
+    },
+    {
+      "source": "fbf4f55f",
+      "sourceAnchor": 1,
+      "target": "f483f1ad",
+      "targetAnchor": 2,
+      "id": "46147cf0",
+      "shape": "flow-polyline-round",
+      "stateProps": {
+        "Expression": "[deptServiceReduceResult] == false",
+        "Next": "DeptCompensationTrigger"
+      },
+      "label": ""
+    },
+    {
+      "source": "15b79f30",
+      "sourceAnchor": 2,
+      "target": "fbf4f55f",
+      "targetAnchor": 0,
+      "id": "c4db2c15",
+      "shape": "flow-polyline-round"
+    },
+    {
+      "source": "8265a130",
+      "sourceAnchor": 1,
+      "target": "15b79f30",
+      "targetAnchor": 3,
+      "id": "4075ca26",
+      "shape": "flow-polyline-round"
+    },
+    {
+      "source": "fbf4f55f",
+      "sourceAnchor": 2,
+      "target": "25e702f3",
+      "targetAnchor": 0,
+      "id": "f56da4ba",
+      "shape": "flow-polyline-round",
+      "stateProps": {
+        "Expression": "[deptServiceReduceResult] == true",
+        "Next": "EmpServiceTask"
+      },
+      "label": ""
+    },
+    {
+      "source": "6da2698d",
+      "sourceAnchor": 1,
+      "target": "4896f850",
+      "targetAnchor": 3,
+      "id": "20cb7eff",
+      "shape": "flow-polyline-round",
+      "stateProps": {
+        "Exceptions": [
+          "java.lang.Throwable"
+        ]
+      }
+    },
+    {
+      "source": "318a6abf",
+      "sourceAnchor": 1,
+      "target": "25e702f3",
+      "targetAnchor": 3,
+      "id": "0c5a7f0e",
+      "shape": "flow-polyline-round"
+    },
+    {
+      "source": "25e702f3",
+      "sourceAnchor": 2,
+      "target": "38e334a1",
+      "targetAnchor": 0,
+      "id": "1356332a",
+      "shape": "flow-polyline-round"
+    },
+    {
+      "source": "38e334a1",
+      "sourceAnchor": 1,
+      "target": "4896f850",
+      "targetAnchor": 2,
+      "id": "f7377441",
+      "shape": "flow-polyline-round",
+      "stateProps": {
+        "Expression": "[empServiceReduceResult]==false",
+        "Next": "EmpCompensationTrigger"
+      },
+      "label": ""
+    },
+    {
+      "source": "38e334a1",
+      "sourceAnchor": 3,
+      "target": "5ae32569",
+      "targetAnchor": 1,
+      "id": "c113bddd",
+      "shape": "flow-polyline-round",
+      "stateProps": {
+        "Expression": "[empServiceReduceResult]==true",
+        "Next": "SuccessHandle"
+      },
+      "label": ""
+    }
+  ]
+}
+
+13、
+
+DROP DATABASE IF EXISTS yootk80;
+CREATE DATABASE yootk80 CHARACTER SET UTF8;
+USE yootk80;
+create table seata_state_machine_def(
+    id               varchar(32)  not null comment 'id',
+    name             varchar(128) not null comment 'name',
+    tenant_id        varchar(32)  not null comment 'tenant id',
+    app_name         varchar(32)  not null comment 'application name',
+    type             varchar(20) comment 'state language type',
+    comment_         varchar(255) comment 'comment',
+    ver              varchar(16)  not null comment 'version',
+    gmt_create       timestamp    not null comment 'create time',
+    status           varchar(2)   not null comment 'status(AC:active|IN:inactive)',
+    content          text comment 'content',
+    recover_strategy varchar(16) comment 'transaction recover strategy(compensate|retry)',
+    primary key (id)
+);
+create table seata_state_machine_inst(
+    id                  varchar(128) not null comment 'id',
+    machine_id          varchar(32) not null comment 'state machine definition id',
+    tenant_id           varchar(32) not null comment 'tenant id',
+    parent_id           varchar(128) comment 'parent id',
+    gmt_started         timestamp   not null comment 'start time',
+    business_key        varchar(48) comment 'business key',
+    start_params        text comment 'start parameters',
+    gmt_end             timestamp comment 'end time',
+    excep               blob comment 'exception',
+    end_params          text comment 'end parameters',
+    status              varchar(2) comment 'status(SU succeed|FA failed|UN unknown|SK skipped|RU running)',
+    compensation_status varchar(2) comment 'compensation status(SU succeed|FA failed|UN unknown|SK skipped|RU running)',
+    is_running          tinyint(1) comment 'is running(0 no|1 yes)',
+    gmt_updated         timestamp   not null,
+    primary key (id),
+    unique key unikey_buz_tenant (business_key, tenant_id)
+);
+create table seata_state_inst(
+    id                       varchar(48)  not null comment 'id',
+    machine_inst_id          varchar(128)  not null comment 'state machine instance id',
+    name                     varchar(128) not null comment 'state name',
+    type                     varchar(20) comment 'state type',
+    service_name             varchar(128) comment 'service name',
+    service_method           varchar(128) comment 'method name',
+    service_type             varchar(16) comment 'service type',
+    business_key             varchar(48) comment 'business key',
+    state_id_compensated_for varchar(50) comment 'state compensated for',
+    state_id_retried_for     varchar(50) comment 'state retried for',
+    gmt_started              timestamp    not null comment 'start time',
+    is_for_update            tinyint(1) comment 'is service for update',
+    input_params             text comment 'input parameters',
+    output_params            text comment 'output parameters',
+    status                   varchar(2)   not null comment 'status(SU succeed|FA failed|UN unknown|SK skipped|RU running)',
+    excep                    text comment 'exception',
+    gmt_end                  timestamp comment 'end time',
+    gmt_updated         timestamp   not null,
+    primary key (id, machine_inst_id)
+);
+
+
+14、
+project(":consumer-springboot-80") { // 消费端模块
+    dependencies {
+        implementation(libraries.'spring-cloud-starter-alibaba-seata') {
+            exclude group: 'io.seata', module: 'seata-spring-boot-starter'
+        }
+        implementation(libraries.'seata-spring-boot-starter')
+        implementation(libraries.'mysql-connector-java')
+        implementation(libraries.'druid')
+        implementation(libraries.'spring-boot-admin-starter-client')
+        implementation('org.springframework.boot:spring-boot-starter-actuator')
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+        implementation(libraries.'httpclient') // 引入httpclient组件
+        implementation(libraries.'feign-httpclient') // 引入feign-httpclient组件
+    }
+}
+
+15、
+spring:
+  boot:
+    admin:
+      client:
+        username: muyan
+        password: yootk
+        url: http://microcloud-admin:8000/
+  main:
+    allow-bean-definition-overriding: true
+  application: # 配置应用信息
+    name: consumer # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanYootk # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        register-enabled: false # 消费端不注册
+        metadata:
+          version: 2.0 # 版本编号匹配了
+  datasource: # 数据源配置
+    type: com.alibaba.druid.pool.DruidDataSource    # 数据源类型
+    driver-class-name: com.mysql.cj.jdbc.Driver     # 驱动程序类
+    url: jdbc:mysql://localhost:3306/yootk80          # 连接地址
+    username: root                                  # 用户名
+    password: mysqladmin                            # 连接密码
+    druid: # druid相关配置
+      initial-size: 5                               # 初始化连接池大小
+      min-idle: 10                                  # 最小维持连接池大小
+      max-active: 50                                # 最大支持连接池大小
+      max-wait: 60000                               # 最大等待时间
+      time-between-eviction-runs-millis: 60000      # 关闭空闲连接间隔
+      min-evictable-idle-time-millis: 30000         # 连接最小生存时间
+      validation-query: SELECT 1 FROM dual          # 状态检测
+      test-while-idle: true # 空闲时检测连接是否有效
+      test-on-borrow: false # 申请时检测连接是否有效
+      test-on-return: false # 归还时检测连接是否有效
+      pool-prepared-statements: false # PSCache缓存
+      max-pool-prepared-statement-per-connection-size: 20 # 配置PS缓存
+      filters: stat, wall, slf4j # 开启过滤
+      stat-view-servlet: # 监控界面配置
+        enabled: true # 启用druid监控界面
+        allow: 127.0.0.1      # 访问白名单
+        login-username: muyan # 用户名
+        login-password: yootk # 密码
+        reset-enable: true # 允许重置
+        url-pattern: /druid/* # 访问路径
+      web-stat-filter:
+        enabled: true # 启动URI监控
+        url-pattern: /* # 跟踪全部服务
+        exclusions: "*.js,*.gif,*.jpg,*.bmp,*.png,*.css,*.ico,/druid/*" # 跟踪排除
+      filter:
+        slf4j: # 日志
+          enabled: true # 启用SLF4j监控
+          data-source-log-enabled: true # 启用数据库日志
+          statement-executable-sql-log-enable: true # 执行日志
+          result-set-log-enabled: true # ResultSet日志启用
+        stat: # SQL监控
+          merge-sql: true # 合并统计
+          log-slow-sql: true # 慢执行记录
+          slow-sql-millis: 1 # 慢SQL执行时间
+        wall: # SQL防火墙
+          enabled: true   # SQL防火墙
+          config: # 防火墙规则
+            multi-statement-allow: true # 允许执行批量SQL
+            delete-allow: false # 禁止执行删除语句
+      aop-patterns: "com.yootk.consumer.action.*" # Spring监控
+
+
+16、
+
+package com.yootk.consumer.config;
+
+import com.alibaba.druid.pool.DruidDataSource;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import javax.sql.DataSource;
+
+@Configuration
+public class DruidConfig {
+    @ConfigurationProperties(prefix = "spring.datasource")
+    @Bean
+    public DataSource druid() {
+        return new DruidDataSource();
+    }
+}
+
+
+17、
+package com.yootk.consumer.config;
+
+import io.seata.saga.engine.config.DbStateMachineConfig;
+import io.seata.saga.engine.impl.ProcessCtrlStateMachineEngine;
+import io.seata.saga.rm.StateMachineEngineHolder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import javax.sql.DataSource;
+import java.util.concurrent.ThreadPoolExecutor;
+
+@Configuration
+public class StateMachineEngineConfig { // 状态机引擎类
+    @Autowired
+    private DataSource dataSource;
+    @Bean
+    public ThreadPoolExecutor getThreadPoolExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor(); // 线程池定义
+        executor.setCorePoolSize(8); // 设置一个核心线程数
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(989999); // 延迟队列
+        executor.setThreadNamePrefix("SAGA_ASYNC_EXEC_"); // 线程前缀
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor.getThreadPoolExecutor();
+    }
+    @Bean
+    public DbStateMachineConfig dbStateMachineConfig() {    // 数据库状态机配置
+        DbStateMachineConfig stateMachineConfig = new DbStateMachineConfig();
+        stateMachineConfig.setDataSource(this.dataSource); // 数据源绑定
+        Resource resource = new ClassPathResource("saga/company-hr-add.json");
+        stateMachineConfig.setResources(new Resource[] {resource}); // 设置了状态机的配置文件
+        stateMachineConfig.setEnableAsync(true);
+        stateMachineConfig.setThreadPoolExecutor(getThreadPoolExecutor());
+        return stateMachineConfig;
+    }
+    @Bean
+    public ProcessCtrlStateMachineEngine stateMachineEngine() {
+        ProcessCtrlStateMachineEngine processCtrlStateMachineEngine = new ProcessCtrlStateMachineEngine();
+        processCtrlStateMachineEngine.setStateMachineConfig(dbStateMachineConfig()); // 读取配置
+        return processCtrlStateMachineEngine;
+    }
+    @Bean
+    public StateMachineEngineHolder stateMachineEngineHolder() {
+        StateMachineEngineHolder engineHolder = new StateMachineEngineHolder();
+        engineHolder.setStateMachineEngine(stateMachineEngine());
+        return engineHolder;
+    }
+}
+
+
+18、
+
+package com.yootk.consumer.saga;
+
+import com.yootk.common.dto.DeptDTO;
+
+public interface IDeptSaga {
+    public boolean reduce(String bussinessKey, DeptDTO dept);
+    public boolean compensateReduce(String bussinessKey, DeptDTO dept);
+}
+
+
+19、
+package com.yootk.consumer.saga.impl;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.consumer.saga.IDeptSaga;
+import com.yootk.service.IDeptService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component("deptSaga")
+@Slf4j
+public class DeptSagaImpl implements IDeptSaga {
+    @Autowired
+    private IDeptService deptService;
+    @Override
+    public boolean reduce(String bussinessKey, DeptDTO dept) {
+        log.info("【部门业务处理】业务KEY：{}、部门信息：{}", bussinessKey, dept);
+        if (dept.getDname() == null || "".equals(dept.getDname())) {
+            throw new RuntimeException("部门名称不允许为空。");
+        }
+        try {
+            return this.deptService.add(dept);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    @Override
+    public boolean compensateReduce(String bussinessKey, DeptDTO dept) {
+        log.info("【部门业务补偿】业务KEY：{}、部门信息：{}", bussinessKey, dept);
+        return false;
+    }
+}
+
+
+20、
+
+package com.yootk.consumer.saga;
+
+import com.yootk.common.dto.EmpDTO;
+
+public interface IEmpSaga {
+    public boolean reduce(String bussinessKey, EmpDTO emp);
+    public boolean compensateReduce(String bussinessKey, EmpDTO emp);
+}
+
+
+21、
+package com.yootk.consumer.saga.impl;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.common.dto.EmpDTO;
+import com.yootk.consumer.saga.IEmpSaga;
+import com.yootk.service.IDeptService;
+import com.yootk.service.IEmpService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component("empSaga")
+@Slf4j
+public class EmpSagaImpl implements IEmpSaga {
+    @Autowired
+    private IEmpService empService;
+    @Override
+    public boolean reduce(String bussinessKey, EmpDTO emp) {
+        log.info("【雇员业务处理】业务KEY：{}、雇员信息：{}", bussinessKey, emp);
+        try {
+            return this.empService.add(emp);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    @Override
+    public boolean compensateReduce(String bussinessKey, EmpDTO emp) {
+        log.info("【雇员业务补偿】业务KEY：{}、雇员信息：{}", bussinessKey, emp);
+        // 本处不再实现具体的业务补偿微服务调用处理了，整个处理的时候都是一个输出
+        return false;
+    }
+}
+
+
+22、
+package com.yootk.consumer.action;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.common.dto.EmpDTO;
+import io.seata.saga.engine.StateMachineEngine;
+import io.seata.saga.statelang.domain.ExecutionStatus;
+import io.seata.saga.statelang.domain.StateMachineInstance;
+import io.seata.spring.annotation.GlobalTransactional;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/consumer/company/*")
+@Slf4j
+public class CompanyConsumerAction {
+    @Autowired
+    private StateMachineEngine stateMachineEngine; // 状态机引擎
+
+    @GetMapping("add")
+    @GlobalTransactional // 全局事务控制
+    public Object add(DeptDTO dept, EmpDTO emp) {
+        Map<String, Object> startParams = new HashMap<>(); // 保存最终的结果
+        String businessKey = String.valueOf(System.currentTimeMillis()); // 模拟业务KEY
+        startParams.put("businessKey", businessKey); // 保存参数
+        startParams.put("dept", dept); // 保存参数
+        startParams.put("emp", emp); // 保存参数
+        StateMachineInstance instance = this.stateMachineEngine.startWithBusinessKey("CompanyService", null, businessKey, startParams);
+        if (ExecutionStatus.SU.equals(instance.getStatus())) {  // 操作成功
+            log.info("人事数据创建成功，XID = {}", instance.getId());
+            return true;
+        } else {
+            log.info("人事数据创建失败，XID = {}", instance.getId());
+            return false;
+        }
+    }
+}
+
+23、
+http://consumer-springboot-80/consumer/company/add?empno=20&ename=小李&salary=800.0&deptno=1&deptno=88&dname=TCC测试部 - 3&loc=洛阳
+
+
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031904] Begin process the state instance in the saga branch.
+c.yootk.consumer.saga.impl.DeptSagaImpl  : 【部门业务处理】业务KEY：1636880246475、部门信息：DeptDTO(deptno=1, dname=TCC测试部 - 3, loc=洛阳)
+com.yootk.service.IDeptService           : [IDeptService#add] ---> POST http://microcloud.gateway/provider/dept/add HTTP/1.1
+com.yootk.service.IDeptService           : [IDeptService#add] Accept-Encoding: gzip
+com.yootk.service.IDeptService           : [IDeptService#add] Accept-Encoding: deflate
+com.yootk.service.IDeptService           : [IDeptService#add] Content-Length: 54
+com.yootk.service.IDeptService           : [IDeptService#add] Content-Type: application/json
+com.yootk.service.IDeptService           : [IDeptService#add] serviceName: pc
+com.yootk.service.IDeptService           : [IDeptService#add] yootk-token: eyJhdXRob3IiOiLmnY7lhbTljY4iLCJtb2R1bGUiOiJ0b2tlbi5wcm92aWRlciIsImFsZyI6IkhTMjU2In0.eyJtc2ciOiLkuJbnlYzkuIrniIblj6_niLHnmoTogIHluIgg4oCU4oCUIOeIhuWPr-eIseeahOWwj-adjuiAgeW4iCIsInN1YiI6IntcInJvbGVzXCI6W1wibWVtYmVyXCIsXCJlbXBcIixcImRlcHRcIl0sXCJhY3Rpb25zXCI6W1wiZW1wOmxpc3RcIixcImRlcHQ6ZWRpdFwiLFwiZGVwdDpsaXN0XCIsXCJlbXA6ZWRpdFwiLFwibWVtYmVyOmFkZFwiLFwiZGVwdDphZGRcIixcImVtcDphZGRcIixcIm1lbWJlcjplZGl0XCIsXCJkZXB0OmRlbGV0ZVwiLFwibWVtYmVyOmRlbGV0ZVwiLFwibWVtYmVyOmxpc3RcIixcImVtcDpkZWxldGVcIl19Iiwic2l0ZSI6Ind3dy55b290ay5jb20iLCJpc3MiOiJNdXlhbllvb3RrIiwiZXhwIjoxNjM2OTgwMjQxLCJpYXQiOjE2MzY4ODAyNDEsIm5pY2UiOiJHb29kIEdvb2QgR29vZCIsImp0aSI6ImFkbWluIn0.I7_ltF6uJPkVKYQz_2ZlupPF132KioPTq5LlkULiMVQ
+com.yootk.service.IDeptService           : [IDeptService#add] 
+com.yootk.service.IDeptService           : [IDeptService#add] {"deptno":1,"dname":"TCC测试部 - 3","loc":"洛阳"}
+com.yootk.service.IDeptService           : [IDeptService#add] ---> END HTTP (54-byte body)
+com.yootk.service.IDeptService           : [IDeptService#add] <--- HTTP/1.1 200 OK (110ms)
+com.yootk.service.IDeptService           : [IDeptService#add] cache-control: no-cache, no-store, max-age=0, must-revalidate
+com.yootk.service.IDeptService           : [IDeptService#add] content-type: application/json
+com.yootk.service.IDeptService           : [IDeptService#add] date: Sun, 14 Nov 2021 08:57:26 GMT
+com.yootk.service.IDeptService           : [IDeptService#add] expires: 0
+com.yootk.service.IDeptService           : [IDeptService#add] pragma: no-cache
+com.yootk.service.IDeptService           : [IDeptService#add] transfer-encoding: chunked
+com.yootk.service.IDeptService           : [IDeptService#add] x-content-type-options: nosniff
+com.yootk.service.IDeptService           : [IDeptService#add] x-frame-options: DENY
+com.yootk.service.IDeptService           : [IDeptService#add] x-xss-protection: 1; mode=block
+com.yootk.service.IDeptService           : [IDeptService#add] 
+com.yootk.service.IDeptService           : [IDeptService#add] true
+com.yootk.service.IDeptService           : [IDeptService#add] <--- END HTTP (4-byte body)
+.s.s.e.p.i.ServiceTaskHandlerInterceptor : State[DeptServiceTask] finish with status[SU]
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031904] Finish process the state instance in the saga branch.
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031904] Begin process the state instance in the saga branch.
+c.yootk.consumer.saga.impl.EmpSagaImpl   : 【雇员业务处理】业务KEY：1636880246475、雇员信息：EmpDTO(empno=20, ename=小李, salary=800.0, deptno=1)
+.s.s.e.p.i.ServiceTaskHandlerInterceptor : State[EmpServiceTask] finish with status[SU]
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031904] Finish process the state instance in the saga branch.
+i.s.s.e.s.db.DbAndReportTcStateLogStore  : StateMachineInstance[192.168.190.191:8091:6143108224087031904] is recovery by server, skip recordStateMachineFinished.
+i.s.s.p.handler.DefaultRouterHandler     : route instruction is null, process end
+c.y.c.action.CompanyConsumerAction       : 人事数据创建成功，XID = 192.168.190.191:8091:6143108224087031904
+i.seata.tm.api.DefaultGlobalTransaction  : [192.168.190.191:8091:6143108224087031904] commit status: Committed
+
+
+
+
+i.seata.tm.api.DefaultGlobalTransaction  : Begin new global transaction [192.168.190.191:8091:6143108224087031909]
+c.a.druid.pool.DruidAbstractDataSource   : discard long time none received connection. , jdbcUrl : jdbc:mysql://localhost:3306/yootk80, version : 1.2.5, lastPacketReceivedIdleMillis : 113639
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031909] Begin process the state instance in the saga branch.
+c.yootk.consumer.saga.impl.DeptSagaImpl  : 【部门业务处理】业务KEY：1636880361108、部门信息：DeptDTO(deptno=1, dname=TCC测试部 - 3, loc=洛阳)
+com.yootk.service.IDeptService           : [IDeptService#add] ---> POST http://microcloud.gateway/provider/dept/add HTTP/1.1
+com.yootk.service.IDeptService           : [IDeptService#add] Accept-Encoding: gzip
+com.yootk.service.IDeptService           : [IDeptService#add] Accept-Encoding: deflate
+com.yootk.service.IDeptService           : [IDeptService#add] Content-Length: 54
+com.yootk.service.IDeptService           : [IDeptService#add] Content-Type: application/json
+com.yootk.service.IDeptService           : [IDeptService#add] serviceName: pc
+com.yootk.service.IDeptService           : [IDeptService#add] yootk-token: eyJhdXRob3IiOiL...
+com.yootk.service.IDeptService           : [IDeptService#add] 
+com.yootk.service.IDeptService           : [IDeptService#add] {"deptno":1,"dname":"TCC测试部 - 3","loc":"洛阳"}
+com.yootk.service.IDeptService           : [IDeptService#add] ---> END HTTP (54-byte body)
+com.yootk.service.IDeptService           : [IDeptService#add] <--- HTTP/1.1 200 OK (109ms)
+com.yootk.service.IDeptService           : [IDeptService#add] cache-control: no-cache, no-store, max-age=0, must-revalidate
+com.yootk.service.IDeptService           : [IDeptService#add] content-type: application/json
+com.yootk.service.IDeptService           : [IDeptService#add] date: Sun, 14 Nov 2021 08:59:21 GMT
+com.yootk.service.IDeptService           : [IDeptService#add] expires: 0
+com.yootk.service.IDeptService           : [IDeptService#add] pragma: no-cache
+com.yootk.service.IDeptService           : [IDeptService#add] transfer-encoding: chunked
+com.yootk.service.IDeptService           : [IDeptService#add] x-content-type-options: nosniff
+com.yootk.service.IDeptService           : [IDeptService#add] x-frame-options: DENY
+com.yootk.service.IDeptService           : [IDeptService#add] x-xss-protection: 1; mode=block
+com.yootk.service.IDeptService           : [IDeptService#add] 
+com.yootk.service.IDeptService           : [IDeptService#add] true
+com.yootk.service.IDeptService           : [IDeptService#add] <--- END HTTP (4-byte body)
+.s.s.e.p.i.ServiceTaskHandlerInterceptor : State[DeptServiceTask] finish with status[SU]
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031909] Finish process the state instance in the saga branch.
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031909] Begin process the state instance in the saga branch.
+c.yootk.consumer.saga.impl.EmpSagaImpl   : 【雇员业务处理】业务KEY：1636880361108、雇员信息：EmpDTO(empno=20, ename=小李, salary=800.0, deptno=1)
+feign.FeignException$InternalServerError: [500 Internal Server Error] during [POST] to [http://microcloud.gateway/provider/emp/add] [IEmpService#add(EmpDTO)]: [{"timestamp":"2021-11-14T08:59:21.742+0000","status":500,"error":"Internal Server Error","message":"\r\n### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicat... (11108 bytes)]
+	at feign.FeignException.serverErrorStatus(FeignException.java:231)
+	at feign.FeignException.errorStatus(FeignException.java:180)
+	at feign.FeignException.errorStatus(FeignException.java:169)
+	at feign.codec.ErrorDecoder$Default.decode(ErrorDecoder.java:92)
+	at feign.SynchronousMethodHandler.executeAndDecode(SynchronousMethodHandler.java:156)
+	at feign.SynchronousMethodHandler.invoke(SynchronousMethodHandler.java:80)
+	at feign.ReflectiveFeign$FeignInvocationHandler.invoke(ReflectiveFeign.java:100)
+	at com.sun.proxy.$Proxy126.add(Unknown Source)
+	at com.yootk.consumer.saga.impl.EmpSagaImpl.reduce(EmpSagaImpl.java:21)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:566)
+	at io.seata.saga.engine.invoker.impl.SpringBeanServiceInvoker.invokeMethod(SpringBeanServiceInvoker.java:278)
+	at io.seata.saga.engine.invoker.impl.SpringBeanServiceInvoker.doInvoke(SpringBeanServiceInvoker.java:141)
+	at io.seata.saga.engine.invoker.impl.SpringBeanServiceInvoker.invoke(SpringBeanServiceInvoker.java:90)
+	at io.seata.saga.engine.pcext.handlers.ServiceTaskStateHandler.process(ServiceTaskStateHandler.java:102)
+	at io.seata.saga.engine.pcext.StateMachineProcessHandler.process(StateMachineProcessHandler.java:71)
+	at io.seata.saga.proctrl.process.impl.CustomizeBusinessProcessor.process(CustomizeBusinessProcessor.java:69)
+	at io.seata.saga.proctrl.impl.ProcessControllerImpl.process(ProcessControllerImpl.java:43)
+	at io.seata.saga.proctrl.eventing.impl.ProcessCtrlEventConsumer.process(ProcessCtrlEventConsumer.java:35)
+	at io.seata.saga.proctrl.eventing.impl.ProcessCtrlEventConsumer.process(ProcessCtrlEventConsumer.java:28)
+	at io.seata.saga.proctrl.eventing.impl.DirectEventBus.offer(DirectEventBus.java:69)
+	at io.seata.saga.proctrl.eventing.impl.DirectEventBus.offer(DirectEventBus.java:33)
+	at io.seata.saga.proctrl.eventing.impl.ProcessCtrlEventPublisher.publish(ProcessCtrlEventPublisher.java:34)
+	at io.seata.saga.engine.impl.ProcessCtrlStateMachineEngine.startInternal(ProcessCtrlStateMachineEngine.java:155)
+	at io.seata.saga.engine.impl.ProcessCtrlStateMachineEngine.startWithBusinessKey(ProcessCtrlStateMachineEngine.java:91)
+	at com.yootk.consumer.action.CompanyConsumerAction.add(CompanyConsumerAction.java:33)
+	at com.yootk.consumer.action.CompanyConsumerAction$$FastClassBySpringCGLIB$$e5c5a4be.invoke(<generated>)
+	at org.springframework.cglib.proxy.MethodProxy.invoke(MethodProxy.java:218)
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.invokeJoinpoint(CglibAopProxy.java:769)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:747)
+	at io.seata.spring.annotation.GlobalTransactionalInterceptor$2.execute(GlobalTransactionalInterceptor.java:184)
+	at io.seata.tm.api.TransactionalTemplate.execute(TransactionalTemplate.java:127)
+	at io.seata.spring.annotation.GlobalTransactionalInterceptor.handleGlobalTransaction(GlobalTransactionalInterceptor.java:181)
+	at io.seata.spring.annotation.GlobalTransactionalInterceptor.invoke(GlobalTransactionalInterceptor.java:150)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:186)
+	at org.springframework.aop.framework.CglibAopProxy$CglibMethodInvocation.proceed(CglibAopProxy.java:747)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:689)
+	at com.yootk.consumer.action.CompanyConsumerAction$$EnhancerBySpringCGLIB$$d0a5a587.add(<generated>)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:566)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:190)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:138)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:106)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:879)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:793)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1040)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:943)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1006)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:898)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:634)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:883)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:741)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:231)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:166)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:53)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:166)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:119)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:166)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:119)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:166)
+	at org.springframework.boot.actuate.metrics.web.servlet.WebMvcMetricsFilter.doFilterInternal(WebMvcMetricsFilter.java:109)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:119)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:166)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:119)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:166)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:202)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:96)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:541)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:139)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:92)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:343)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:367)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:65)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:868)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1639)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:49)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61)
+	at java.base/java.lang.Thread.run(Thread.java:834)
+.s.s.e.p.i.ServiceTaskHandlerInterceptor : State[EmpServiceTask] finish with status[FA]
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031909] Finish process the state instance in the saga branch.
+i.s.s.e.s.db.DbAndReportTcStateLogStore  : StateMachineInstance[192.168.190.191:8091:6143108224087031909] is recovery by server, skip recordStateMachineFinished.
+i.s.s.e.pcext.routers.TaskStateRouter    : StateInstruction is ended, Stop the StateMachine executing. StateMachine[CompanyService] Current State[EmpCompensationTrigger]
+i.s.s.p.handler.DefaultRouterHandler     : route instruction is null, process end
+c.y.c.action.CompanyConsumerAction       : 人事数据创建失败，XID = 192.168.190.191:8091:6143108224087031909
+i.seata.tm.api.DefaultGlobalTransaction  : [192.168.190.191:8091:6143108224087031909] commit status: Committed
+
+
+
+c.yootk.consumer.saga.impl.DeptSagaImpl  : 【部门业务处理】业务KEY：1636882180037、部门信息：DeptDTO(deptno=1, dname=Saga部门  - 1, loc=洛阳)
+com.yootk.service.IDeptService           : [IDeptService#add] ---> POST http://microcloud.gateway/provider/dept/add HTTP/1.1
+com.yootk.service.IDeptService           : [IDeptService#add] Accept-Encoding: gzip
+com.yootk.service.IDeptService           : [IDeptService#add] Accept-Encoding: deflate
+com.yootk.service.IDeptService           : [IDeptService#add] Content-Length: 53
+com.yootk.service.IDeptService           : [IDeptService#add] Content-Type: application/json
+com.yootk.service.IDeptService           : [IDeptService#add] serviceName: pc
+com.yootk.service.IDeptService           : [IDeptService#add] yootk-token: eyJhdXRob3IiOiLmnY7lhbTljY4iLCJtb2R1bGUiOiJ0b2tlbi5wcm92aWRlciIsImFsZyI6IkhTMjU2In0.eyJtc2ciOiLkuJbnlYzkuIrniIblj6_niLHnmoTogIHluIgg4oCU4oCUIOeIhuWPr-eIseeahOWwj-adjuiAgeW4iCIsInN1YiI6IntcInJvbGVzXCI6W1wibWVtYmVyXCIsXCJlbXBcIixcImRlcHRcIl0sXCJhY3Rpb25zXCI6W1wiZW1wOmxpc3RcIixcImRlcHQ6ZWRpdFwiLFwiZGVwdDpsaXN0XCIsXCJlbXA6ZWRpdFwiLFwibWVtYmVyOmFkZFwiLFwiZGVwdDphZGRcIixcImVtcDphZGRcIixcIm1lbWJlcjplZGl0XCIsXCJkZXB0OmRlbGV0ZVwiLFwibWVtYmVyOmRlbGV0ZVwiLFwibWVtYmVyOmxpc3RcIixcImVtcDpkZWxldGVcIl19Iiwic2l0ZSI6Ind3dy55b290ay5jb20iLCJpc3MiOiJNdXlhbllvb3RrIiwiZXhwIjoxNjM2OTgyMTUwLCJpYXQiOjE2MzY4ODIxNTAsIm5pY2UiOiJHb29kIEdvb2QgR29vZCIsImp0aSI6ImFkbWluIn0.5MMR94PKHl7myGHzuesreBEfKyYRQmzFUflMIPXMpEE
+com.yootk.service.IDeptService           : [IDeptService#add] 
+com.yootk.service.IDeptService           : [IDeptService#add] {"deptno":1,"dname":"Saga部门  - 1","loc":"洛阳"}
+com.yootk.service.IDeptService           : [IDeptService#add] ---> END HTTP (53-byte body)
+com.yootk.service.IDeptService           : [IDeptService#add] <--- HTTP/1.1 200 OK (101ms)
+com.yootk.service.IDeptService           : [IDeptService#add] cache-control: no-cache, no-store, max-age=0, must-revalidate
+com.yootk.service.IDeptService           : [IDeptService#add] content-type: application/json
+com.yootk.service.IDeptService           : [IDeptService#add] date: Sun, 14 Nov 2021 09:29:40 GMT
+com.yootk.service.IDeptService           : [IDeptService#add] expires: 0
+com.yootk.service.IDeptService           : [IDeptService#add] pragma: no-cache
+com.yootk.service.IDeptService           : [IDeptService#add] transfer-encoding: chunked
+com.yootk.service.IDeptService           : [IDeptService#add] x-content-type-options: nosniff
+com.yootk.service.IDeptService           : [IDeptService#add] x-frame-options: DENY
+com.yootk.service.IDeptService           : [IDeptService#add] x-xss-protection: 1; mode=block
+com.yootk.service.IDeptService           : [IDeptService#add] 
+com.yootk.service.IDeptService           : [IDeptService#add] true
+com.yootk.service.IDeptService           : [IDeptService#add] <--- END HTTP (4-byte body)
+.s.s.e.p.i.ServiceTaskHandlerInterceptor : State[DeptServiceTask] finish with status[SU]
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031955] Finish process the state instance in the saga branch.
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031955] Begin process the state instance in the saga branch.
+c.yootk.consumer.saga.impl.EmpSagaImpl   : 【雇员业务处理】业务KEY：1636882180037、雇员信息：EmpDTO(empno=20, ename=小李, salary=800.0, deptno=1)
+feign.FeignException$InternalServerError: [500 Internal Server Error] during [POST] to [http://microcloud.gateway/provider/emp/add] [IEmpService#add(EmpDTO)]: [{"timestamp":"2021-11-14T09:29:40.915+0000","status":500,"error":"Internal Server Error","message":"\r\n### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicat... (11108 bytes)]
+.s.s.e.p.i.ServiceTaskHandlerInterceptor : State[EmpServiceTask] finish with status[FA]
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031955] Finish process the state instance in the saga branch.
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031955] Begin process the state instance in the saga branch.
+c.yootk.consumer.saga.impl.DeptSagaImpl  : 【部门业务补偿】业务KEY：1636882180037、部门信息：DeptDTO(deptno=1, dname=Saga部门  - 1, loc=洛阳)
+.s.s.e.p.i.ServiceTaskHandlerInterceptor : State[deptCompensation] finish with status[FA]
+s.s.e.p.i.InSagaBranchHandlerInterceptor : [192.168.190.191:8091:6143108224087031955] Finish process the state instance in the saga branch.
+i.s.s.e.s.db.DbAndReportTcStateLogStore  : StateMachineInstance[192.168.190.191:8091:6143108224087031955] is recovery by server, skip recordStateMachineFinished.
+i.s.s.p.handler.DefaultRouterHandler     : route instruction is null, process end
+c.y.c.action.CompanyConsumerAction       : 人事数据创建失败，XID = 192.168.190.191:8091:6143108224087031955
+i.seata.tm.api.DefaultGlobalTransaction  : [192.168.190.191:8091:6143108224087031955] commit status: Committed
+

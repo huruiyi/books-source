@@ -1,0 +1,135 @@
+1、
+project(":consumer-springboot-80") { // 消费端模块
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+    }
+}
+
+
+2、
+server: # 服务端配置
+  port: 80 # 这个接口可以随意，反正最终都是由前端提供服务
+
+3、
+package com.yootk.consumer.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+
+@Configuration
+public class RestTemplateConfig { // 实现RestTemplate的相关配置
+    @Bean // 向Spring容器之中进行Bean注册
+    public RestTemplate getRestTemplate() {
+        return new RestTemplate();
+    }
+}
+
+
+4、
+http://provider-dept-8001:8001/provider/dept/get/1
+http://provider-dept-8001:8001/provider/dept/list
+http://provider-dept-8001:8001/provider/dept/split?cp=1&ls=2&col=dname&kw=
+http://provider-dept-8001:8001/provider/dept/add
+
+5、
+package com.yootk.consumer.action;
+
+import com.yootk.common.dto.DeptDTO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/consumer/dept/*") // 两个不同的服务路径
+public class DeptConsumerAction { // 消费端Action
+    // 定义出要访问的部门微服务所需要的核心路径前缀，随后在具体请求的时候添加传递的参数
+    public static final String DEPT_ADD_URL =
+            "http://provider-dept-8001:8001/provider/dept/add";
+    public static final String DEPT_GET_URL =
+            "http://provider-dept-8001:8001/provider/dept/get/"; // id是自己变更的
+    public static final String DEPT_LIST_URL =
+            "http://provider-dept-8001:8001/provider/dept/list";
+    public static final String DEPT_SPLIT_URL =
+            "http://provider-dept-8001:8001/provider/dept/split";
+    @Autowired
+    private RestTemplate restTemplate; // 本章你是主角儿
+    @GetMapping("add") // 消费端接口名称
+    public Object addDept(DeptDTO dto) {
+        // 需要将当前的DTO对象传递到部门微服务之中，所以此时就要通过RestTemplate对象处理
+        return this.restTemplate.postForObject(DEPT_ADD_URL, dto, Boolean.class);
+    }
+    @GetMapping("get")
+    public Object get(Long deptno) {
+        return this.restTemplate.getForObject(DEPT_GET_URL + deptno, DeptDTO.class);
+    }
+    @GetMapping("list")
+    public Object list() {
+        return this.restTemplate.getForObject(DEPT_LIST_URL, List.class);
+    }
+    @GetMapping("split")
+    public Object split(int cp, int ls, String col, String kw) {
+        return this.restTemplate.getForObject(DEPT_SPLIT_URL + "?cp=" + cp + "&ls=" + ls + "&col=" + col + "&kw=" + kw, Map.class);
+    }
+}
+
+
+6、
+package com.yootk.consumer;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StartConsumerApplication { // 沐言科技：www.yootk.com
+    public static void main(String[] args) {
+        SpringApplication.run(StartConsumerApplication.class, args);
+    }
+}
+
+
+7、
+http://consumer-springboot-80/consumer/dept/get?deptno=1
+http://consumer-springboot-80/consumer/dept/list
+http://consumer-springboot-80/consumer/dept/split?cp=1&ls=2&col=dname&kw
+http://consumer-springboot-80/consumer/dept/add?dname=公益直播部&loc=洛阳
+
+8、
+package com.yootk.provider.action;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.service.IDeptService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/provider/dept/*") // 微服务提供者父路径
+public class DeptAction {
+    @Autowired
+    private IDeptService deptService;
+    @GetMapping("get/{id}")
+    public Object get(@PathVariable("id") long id) {
+        return this.deptService.get(id);
+    }
+    @PostMapping("add")
+    public Object add(@RequestBody  DeptDTO deptDTO) {    // 后面会修改参数模式为JSON
+        return this.deptService.add(deptDTO);
+    }
+    @GetMapping("list")
+    public Object list() {
+        return this.deptService.list();
+    }
+    @GetMapping("split")
+    public Object split(int cp, int ls, String col, String kw) {
+        return this.deptService.split(cp, ls, col, kw);
+    }
+}
+
+
+9、
+

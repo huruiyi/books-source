@@ -1,0 +1,134 @@
+1、
+spring:
+  application: # 配置应用信息
+    name: dept.provider # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        weight: 10
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: YootkCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        metadata:  # 根据自身的需要配置元数据
+          version: 2.0 # 自定义元数据项
+          company: 沐言科技 # 自定义元数据项
+          url: www.yootk.com # 自定义元数据项
+          author: 李兴华（爆可爱的小李老师） # 自定义元数据项
+
+2、
+spring:
+  application: # 配置应用信息
+    name: consumer # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanYootk # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        register-enabled: false # 消费端不注册
+        metadata:
+          version: 2.0 # 版本编号匹配了
+
+3、
+
+package muyan.yootk.loadbalancer.rule;
+
+import com.alibaba.cloud.nacos.NacosDiscoveryProperties;
+import com.alibaba.cloud.nacos.ribbon.ExtendBalancer;
+import com.alibaba.cloud.nacos.ribbon.NacosServer;
+import com.alibaba.nacos.api.exception.NacosException;
+import com.alibaba.nacos.api.naming.NamingService;
+import com.alibaba.nacos.api.naming.pojo.Instance;
+import com.netflix.client.config.IClientConfig;
+import com.netflix.loadbalancer.AbstractLoadBalancerRule;
+import com.netflix.loadbalancer.BaseLoadBalancer;
+import com.netflix.loadbalancer.Server;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+@Slf4j
+public class NacosVersionRule extends AbstractLoadBalancerRule {
+    // 如果要想按照集群调用，那么首先一定要知道当前消费端的集群名称是什么
+    @Autowired
+    private NacosDiscoveryProperties nacosDiscoveryProperties; // 注入Nacos发现服务配置项
+    @Autowired
+    private IClientConfig clientConfig;
+
+    @Override
+    public void initWithNiwsConfig(IClientConfig clientConfig) {
+        this.clientConfig = clientConfig;
+    }
+
+    @Override
+    public Server choose(Object key) {
+        BaseLoadBalancer loadBalancer = (BaseLoadBalancer) super.getLoadBalancer();
+        // 如果此时没有这个调用的微服务名称，那么是无法实现最终的服务查询的
+        String name = loadBalancer.getName();// 获取服务名称
+        NamingService namingService = this.nacosDiscoveryProperties.namingServiceInstance();
+        try {
+            // 根据指定的服务名称以及分组的名称获取全部的可用实例数据
+            List<Instance> instances = namingService.selectInstances(name, this.nacosDiscoveryProperties.getGroup(), true);
+            // 对获取到的实例集合进行迭代处理，筛选出所需要的与当前版本匹配的实例数据
+            List<Instance> metadataVersionMatchInstance = instances.stream()
+                    .filter(instance -> Objects.equals(
+                            this.nacosDiscoveryProperties.getMetadata().get("version"), // 消费端配置的元数据版本项
+                            instance.getMetadata().get("version"))) // 注册微服务实例配置的元数据版本项
+                    .collect(Collectors.toList());
+            // 必须考虑没有匹配版本下的实例筛选操作
+            List<Instance> selectedInstances = null; // 最终所使用的实例集合
+            if (CollectionUtils.isEmpty(metadataVersionMatchInstance)) {    // 没有查询到匹配的集合
+                selectedInstances = instances;
+            } else {
+                selectedInstances = metadataVersionMatchInstance; // 版本匹配
+            }
+            Instance instance = ExtendBalancer.getHostByRandomWeight2(selectedInstances);
+            return new NacosServer(instance);
+        } catch (NacosException e) {
+            log.error("获取Nacos注册的微服务实例出错，异常为：" + e);
+        }
+        return null;
+    }
+}
+
+4、
+package muyan.yootk.config.ribbon; // 该包不在应用程序启动类的扫描包路径下
+
+import com.netflix.loadbalancer.IRule;
+import muyan.yootk.loadbalancer.rule.NacosVersionRule;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration // 这个类必须使用该注解定义
+public class DeptProviderRibbonConfig {
+    @Bean // Bean注册
+    public IRule ribbonRule() { // 自定义负载均衡规则
+        return new NacosVersionRule(); // 随机读取
+    }
+}
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

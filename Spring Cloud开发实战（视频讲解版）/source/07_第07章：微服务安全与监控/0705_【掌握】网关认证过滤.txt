@@ -1,0 +1,159 @@
+1、
+yootk:
+  security:
+    config:
+      jwt:
+        sign: muyan
+        issuer: MuyanYootk
+        secret: www.yootk.com
+        expire: 100000 # 单位：秒
+      password:
+        encrypt:
+          repeat: 5
+          salt: www.yootk.com
+gateway: # 自定义的配置项
+  config:
+    jwt:
+      header-name: yootk-token # 头信息的参数名称
+      skip-auth-urls: # 跳过的检查路径
+        - /token/create
+
+2、
+package com.yootk.gateway.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+@Data
+@ConfigurationProperties(prefix = "gateway.config.jwt") // 定义配置头
+public class GatewayJWTConfigProperties { // 网关的配置项
+    private List<String> skipAuthUrls; // 配置的跳过路径
+    private String headerName; // 头信息名称
+}
+
+
+3、
+project(":gateway-9501") {  // 网关模块
+    dependencies {
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(project(":yootk-starter-jwt")) // 导入JWT子模块
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+        implementation('org.springframework.cloud:spring-cloud-starter-gateway') // 网关依赖
+        implementation('org.springframework.boot:spring-boot-starter-actuator') // Actuator依赖库
+        implementation('org.springframework.cloud:spring-cloud-starter-loadbalancer')
+        implementation(libraries.'caffeine')
+        implementation(libraries.'micrometer-registry-prometheus')
+        implementation(libraries.'micrometer-core')
+    }
+}
+
+4、
+package com.yootk.gateway.filter.global;
+
+import com.alibaba.nacos.api.utils.StringUtils;
+import com.yootk.gateway.config.GatewayJWTConfigProperties;
+import com.yootk.jwt.code.JWTResponseCode;
+import com.yootk.jwt.service.ITokenService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.nio.charset.StandardCharsets;
+
+@Component
+@Slf4j
+public class JWTTokenCheckFilter implements GlobalFilter {  // 全局过滤器
+    @Autowired
+    private GatewayJWTConfigProperties jwtConfig; // JWT的相关配置属性
+    @Autowired
+    private ITokenService tokenService; // 进行Token处理
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String url = exchange.getRequest().getURI().getPath(); // 获取路径
+        if (this.jwtConfig.getSkipAuthUrls() != null && this.jwtConfig.getSkipAuthUrls().contains(url)) {
+            return chain.filter(exchange); // 向下继续执行其他的后续操作
+        }
+        // 网关将通过头信息获取到JWT的数据内容，网关技术通过WebFlux技术开发的
+        String token = exchange.getRequest().getHeaders().get(this.jwtConfig.getHeaderName()).get(0);
+        log.info("网关Token检查，Token = {}", token); // 日志输出
+        // 如果假设Token有错误了，那么网关是需要直接进行响应的，请求肯定不会发送给目标的微服务
+        ServerHttpResponse response = exchange.getResponse();
+        if (StringUtils.isBlank(token)) { // Token数据为空
+            DataBuffer buffer = response.bufferFactory().wrap(JWTResponseCode.NO_AUTH_CODE.toString().getBytes(StandardCharsets.UTF_8));
+            return response.writeWith(Flux.just(buffer)); // 异步响应错误
+        } else {    // Token数据不为空
+            if (this.tokenService.verifyToken(token)) { // 校验成功
+                return chain.filter(exchange);
+            } else {
+                DataBuffer buffer = response.bufferFactory().wrap(JWTResponseCode.TOKEN_TIMEOUT_CODE.toString().getBytes(StandardCharsets.UTF_8));
+                return response.writeWith(Flux.just(buffer)); // 异步响应错误
+            }
+        }
+    }
+}
+
+
+5、
+[
+  {
+    "id": "dept",
+    "uri": "lb://dept.provider",
+    "order": 1,
+    "predicates": [
+      {
+        "name": "Path",
+        "args": {
+          "pattern": "/provider/dept/**"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "name": "AddRequestHeader",
+        "args": {
+          "_genkey_0": "Request-Token-Muyan",
+          "_genkey_1": "www.yootk.com"
+        }
+      }
+    ]
+  },
+  {
+    "id": "token",
+    "uri": "lb://token.provider",
+    "order": 1,
+    "predicates": [
+      {
+        "name": "Path",
+        "args": {
+          "pattern": "/token/**"
+        }
+      }
+    ]
+  }
+]
+
+
+6、
+gateway-9501:9501/token/create?mid=admin&password=hello
+
+7、
+
+
+8、
+
+
+9、
+

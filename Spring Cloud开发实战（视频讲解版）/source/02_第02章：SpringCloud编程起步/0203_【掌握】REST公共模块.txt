@@ -1,0 +1,111 @@
+1、
+// https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web
+implementation group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '2.5.2'
+
+
+2、
+project(":common-api") {    // 进行子模块的配置
+    dependencies { // 配置模块所需要的依赖库
+        compile("org.springframework.boot:spring-boot-starter-web") // SpringBoot依赖
+    }
+}
+
+3、
+package com.yootk.common.dto;
+
+import lombok.Data;
+
+import java.io.Serializable;
+// 该类主要实现部门数据结构的映射，实现数据的远程传输
+@Data // Lombok注解，自动生成所需要的类结构
+public class DeptDTO implements Serializable { // 定义数据传输类
+    private Long deptno; // 部门编号
+    private String dname; // 部门名称
+    private String loc; // 部门位置
+}
+
+
+4、
+package com.yootk.service;
+
+import com.yootk.common.dto.DeptDTO;
+
+import java.util.List;
+import java.util.Map;
+
+public interface IDeptService { // 业务接口
+    /**
+     * 根据部门的编号获取部门的完整信息
+     * @param id 要查询的部门编号
+     * @return 编号存在则以DTO对象的形式返回部门数据，如果不存在返回null
+     */
+    public DeptDTO get(long id);
+    /**
+     * 增加部门对象
+     * @param dto 保存要增加部门的详细数据
+     * @return 增加成功返回true，否则返回false
+     */
+    public boolean add(DeptDTO dto);
+    /**
+     * 列出所有的部门数据信息
+     * @return 全部数据的集合， 如果没有任何的部门数据则集合为空（size() == 0）
+     */
+    public List<DeptDTO> list();
+    /**
+     * 进行部门的分页数据加载操作
+     * @param currentPage 当前所在页
+     * @param lineSize 每页加载的数据行数
+     * @param column 模糊查询的数据列
+     * @param keyword 模糊查询关键字
+     * @return 部门集合数据以及统计数据，返回的数据项包括：
+     * 1、key = allDepts、value = List集合（部门的全部数据对象）
+     * 2、key = allRecorders、value = 总记录数；
+     * 3、key = allPages、value = 页数。
+     */
+    public Map<String, Object> split(int currentPage, int lineSize, String column, String keyword);
+}
+
+
+5、
+package com.yootk.common.util;
+
+import org.springframework.beans.BeanUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+public class DeepBeanUtils extends BeanUtils { // 扩充已有的Bean工具类
+    private DeepBeanUtils() {}
+
+    /**
+     * 实现List集合对象的拷贝处理
+     * @param sources 原始对象集合
+     * @param target 目标对象集合
+     * @param <S> 源对象类型
+     * @param <T> 目标对象类型
+     * @return 拷贝后的List集合
+     */
+    public static <S, T> List<T> copyListProperties(List<S> sources, Supplier<T> target) {
+        List<T> list = new ArrayList<>(sources.size()); // 开辟一个新的List集合
+        for (S source : sources) { // 集合迭代
+            T obj = target.get(); // 获取数据
+            copyProperties(source, obj); // 由父类所提供的拷贝方法
+            list.add(obj); // 增加集合数据
+        }
+        return list; // 返回集合
+    }
+}
+
+
+6、
+https://gitee.com/threesoil/microcloud
+
+7、
+
+
+8、
+
+
+9、
+

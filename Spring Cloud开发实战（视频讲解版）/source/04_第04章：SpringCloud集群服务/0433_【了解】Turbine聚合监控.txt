@@ -1,0 +1,81 @@
+1、
+// https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-netflix-turbine
+implementation group: 'org.springframework.cloud', name: 'spring-cloud-starter-netflix-turbine', version: '2.2.9.RELEASE'
+
+
+2、
++--- org.springframework.cloud:spring-cloud-starter-netflix-turbine -> 2.2.2.RELEASE
+|    +--- org.springframework.cloud:spring-cloud-starter:2.2.2.RELEASE (*)
+|    +--- org.springframework.cloud:spring-cloud-starter-netflix-eureka-client:2.2.2.RELEASE
+
+3、
+project(":trubine-8201") {
+    dependencies {
+        implementation("org.springframework.boot:spring-boot-starter-web")
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+        implementation('org.springframework.cloud:spring-cloud-starter-netflix-turbine') {
+            // 默认情况下Turbine属于Netflix套件之中的组成，所以必须要移除Eureka相关依赖
+            exclude group: 'org.springframework.cloud', module: 'spring-cloud-starter-netflix-eureka-client'
+        }
+    }
+}
+
+4、
+server: # 服务端配置
+  port: 8201 # 8201端口
+spring:
+  application: # 配置应用信息
+    name: turbine # 是微服务的名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        weight: 10
+        service: ${spring.application.name} # 使用微服务的名称作为注册的服务名称
+        server-addr: nacos-server:8848 # Nacos地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: YootkCluster # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+        metadata:  # 根据自身的需要配置元数据
+          version: 2.0 # 自定义元数据项
+          company: 沐言科技 # 自定义元数据项
+          url: www.yootk.com # 自定义元数据项
+          author: 李兴华（爆可爱的小李老师） # 自定义元数据项
+turbine:
+  app-config: dept.provider
+  cluster-name-expression: new String('default')
+
+5、
+package com.yootk.turbine;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.turbine.EnableTurbine;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+@EnableTurbine
+public class StartTurbineApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(StartTurbineApplication.class, args);
+    }
+}
+
+
+6、
+127.0.0.1	trubine-8201
+
+7、
+trubine-8201:8201/turbine.stream
+
+8、
+
+
+9、
+

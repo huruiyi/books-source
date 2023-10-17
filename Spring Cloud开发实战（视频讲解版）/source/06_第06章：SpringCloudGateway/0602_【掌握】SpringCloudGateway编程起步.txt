@@ -1,0 +1,66 @@
+1、
+// https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-gateway
+implementation group: 'org.springframework.cloud', name: 'spring-cloud-starter-gateway', version: '3.0.3'
+
+
+2、
+project(":gateway-9501") {  // 网关模块
+    dependencies {
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+        implementation('org.springframework.cloud:spring-cloud-starter-gateway') // 网关依赖
+    }
+}
+
+3、
+server:
+  port: 9501 # 网关服务的端口
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: true # 通过服务发现查找其他的微服务
+
+4、
+package com.yootk.gateway;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class StartGatewayApplication9501 { // 网关应用启动类
+    public static void main(String[] args) {
+        SpringApplication.run(StartGatewayApplication9501.class, args);
+    }
+}
+
+
+5、
+127.0.0.1	gateway-9501
+
+6、
+gateway-9501:9501/dept.provider/provider/dept/list
+
+7、
+gateway-9501:9501/dept.provider/provider/dept/get/1
+
+8、
+gateway-9501:9501/dept.provider/provider/dept/split?cp=1&ls=2&col=dname&kw
+
+9、
+gateway-9501:9501/dept.provider/provider/dept/add

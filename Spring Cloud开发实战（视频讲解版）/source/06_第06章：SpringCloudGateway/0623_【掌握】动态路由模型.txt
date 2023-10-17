@@ -1,0 +1,220 @@
+1、
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    loadbalancer:
+      ribbon:
+        enabled: false # 关闭默认配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      metrics:
+        enabled: true # 启用服务监控
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: false # 取消默认路由配置，默认值就是false
+      routes: # 定义静态路由
+        - id: yootk_example # 配置路由ID
+          uri: https://www.yootk.com/resources # 设置访问路径的匹配
+          predicates:
+            - Path=/muyan-yootk # 配置访问路径
+        - id: forward_example # 配置路由ID
+          uri: forward:///globalforward # 配置本地转发
+          predicates:
+            - Path=/globalforward # 配置访问路径
+          filters:
+            - PrefixPath=/gateway/action # 路径前缀
+        - id: dept # 路由标记
+          uri: lb://dept.provider # 负载均衡调用
+          predicates: # 路由谓词工厂
+            - Path=/** # 匹配全部的路径
+          filters: # 配置过滤器
+            - RemoveRequestHeader=Request-Token-Muyan # 删除指定的头信息
+            - Log=muyan, yootk # 过滤器=NameValueConfig（name属性, value属性）
+
+2、
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    loadbalancer:
+      ribbon:
+        enabled: false # 关闭默认配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      metrics:
+        enabled: true # 启用服务监控
+      discovery: # 服务发现
+        locator: # 资源定位
+          enabled: false # 取消默认路由配置，默认值就是false
+
+3、
+package com.yootk.gateway.service;
+
+import javassist.NotFoundException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.gateway.event.RefreshRoutesEvent;
+import org.springframework.cloud.gateway.route.RouteDefinition;
+import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationEventPublisherAware;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+
+@Service
+@Slf4j
+public class DynamicRouteService implements ApplicationEventPublisherAware {
+    @Autowired
+    private RouteDefinitionWriter routeDefinitionWriter; // 路由数据的写入
+    private ApplicationEventPublisher publisher; // 事件发布器
+
+    @Override
+    public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+        this.publisher = applicationEventPublisher; // 保存事件发布器
+    }
+
+    public boolean add(RouteDefinition definition) {    // 追加新的路由配置
+        log.info("增加路由配置项，新的路由ID为：{}", definition.getId()); // 日志输出
+        try {
+            this.routeDefinitionWriter.save(Mono.just(definition)).subscribe(); // 配置写入
+            this.publisher.publishEvent(new RefreshRoutesEvent(this)); // 发布路由事件
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("路由增加失败，增加的路由ID为：{}", definition.getId());
+            return false;
+        }
+        return true;
+    }
+
+    public Mono<ResponseEntity<Object>> delete(String id) { // 根据id删除数据
+        log.info("删除路由配置项，删除的路由ID为：{}", id); // 日志输出
+        return this.routeDefinitionWriter.delete(Mono.just(id)).then(Mono.defer(() -> {
+            return Mono.just(ResponseEntity.ok().build());
+        })).onErrorResume((t) -> {
+            return t instanceof NotFoundException;
+        }, (r) -> {
+            return Mono.just(ResponseEntity.notFound().build());
+        });
+    }
+
+    public boolean update(RouteDefinition definition) {    // 修改已有的路由配置
+        log.info("更新路由配置项，新的路由ID为：{}", definition.getId()); // 日志输出
+        try {
+            this.delete(definition.getId()); // 根据ID删除已有路由
+            this.routeDefinitionWriter.save(Mono.just(definition)).subscribe(); // 配置写入
+            this.publisher.publishEvent(new RefreshRoutesEvent(this)); // 发布路由事件
+        } catch (Exception e) {
+            log.error("路由更新失败，增加的路由ID为：{}", definition.getId());
+            return false;
+        }
+        return true;
+    }
+}
+
+
+
+4、
+package com.yootk.gateway.action;
+
+import com.yootk.gateway.service.DynamicRouteService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.gateway.route.RouteDefinition;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+
+@RestController
+@RequestMapping("/routes/*") // 访问父路径
+public class DynamicRouteAction { // 动态路由
+    @Autowired
+    private DynamicRouteService dynamicRouteService; // 路由业务对象
+    @PostMapping("add")
+    public Boolean add(@RequestBody RouteDefinition definition) {
+        return this.dynamicRouteService.add(definition);
+    }
+    @DeleteMapping("delete/{id}")
+    public Mono<ResponseEntity<Object>> delete(@PathVariable String id) {
+        return this.dynamicRouteService.delete(id);
+    }
+    @PostMapping("update")
+    public Boolean update(@RequestBody RouteDefinition definition) {
+        return this.dynamicRouteService.update(definition);
+    }
+}
+
+
+5、
+gateway-9501:9501/routes/add
+
+6、
+{
+  "id": "dept",
+  "uri": "lb://dept.provider",
+  "order": 1,
+  "predicates": [
+    {
+      "name": "Path",
+      "args": {
+        "pattern": "/**"
+      }
+    }
+  ],
+  "filters": [
+    {
+      "name": "AddRequestHeader",
+      "args": {
+        "_genkey_0": "Request-Token-Muyan",
+        "_genkey_1": "www.yootk.com"
+      }
+    }
+  ]
+}
+
+7、
+gateway-9501:9501/routes/update
+
+
+{
+  "id": "dept",
+  "uri": "lb://dept.provider",
+  "order": 1,
+  "predicates": [
+    {
+      "name": "Path",
+      "args": {
+        "pattern": "/provider/dept/list"
+      }
+    }
+  ],
+  "filters": [
+    {
+      "name": "AddRequestHeader",
+      "args": {
+        "_genkey_0": "Request-Token-Muyan",
+        "_genkey_1": "www.yootk.com"
+      }
+    }
+  ]
+}
+
+8、
+gateway-9501:9501/routes/delete/dept
+
+9、
+gateway-9501:9090/actuator/gateway/routes

@@ -1,0 +1,291 @@
+1、
+package com.yootk.common.util.tcc;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class TCCResultStore { // TCC状态存储
+    // 考虑到实际的开发之中会有多个线程进行TCC的状态操作，所以需要存在有一个xid的存储集合
+    private static final Map<Class<?>, Map<String, String>> RESULT_MAP = new ConcurrentHashMap<>(); // 定义存储状态
+    public static void setResult(Class<?> tccClass, String xid, String v) {    // 分布式事务数据存储
+        Map<String, String> results = RESULT_MAP.get(tccClass); // 判断是否有指定的TCC类型
+        if (results == null) {  // 没有数据集合
+            synchronized (RESULT_MAP) { // 同步处理
+                if (results == null) {
+                    results = new ConcurrentHashMap<>();
+                    RESULT_MAP.put(tccClass, results); // 保存集合数据
+                }
+            }
+        }
+        results.put(xid, v); // 保存当前的分布式事务id
+    }
+    public static String getResult(Class<?> tccClass, String xid) {
+        Map<String, String> results = RESULT_MAP.get(tccClass);
+        if (results != null) {
+            return results.get(xid);
+        }
+        return null;
+    }
+    public static void removeResult(Class<?> tccClass, String xid) {
+        Map<String, String> results = RESULT_MAP.get(tccClass);
+        if (results != null) {
+            results.remove(xid);
+        }
+    }
+}
+
+
+2、
+package com.yootk.provider.tcc;
+
+import com.yootk.common.dto.DeptDTO;
+import io.seata.rm.tcc.api.BusinessActionContext;
+import io.seata.rm.tcc.api.BusinessActionContextParameter;
+import io.seata.rm.tcc.api.LocalTCC;
+import io.seata.rm.tcc.api.TwoPhaseBusinessAction;
+
+@LocalTCC // 开启本地事务处理
+public interface IDeptTCC {
+    @TwoPhaseBusinessAction(name = "deptTCCService", commitMethod = "commit", rollbackMethod = "rollback")
+    public boolean prepareAdd(BusinessActionContext businessActionContext,
+                              @BusinessActionContextParameter(paramName = "dept") DeptDTO dto);
+    public boolean commit(BusinessActionContext businessActionContext);
+    public boolean rollback(BusinessActionContext businessActionContext);
+}
+
+
+3、
+package com.yootk.provider.tcc.impl;
+
+import com.alibaba.fastjson.JSONObject;
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.common.util.DeepBeanUtils;
+import com.yootk.common.util.tcc.TCCResultStore;
+import com.yootk.provider.dao.IDeptDAO;
+import com.yootk.provider.tcc.IDeptTCC;
+import com.yootk.provider.vo.Dept;
+import io.seata.rm.tcc.api.BusinessActionContext;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+public class DeptTCCImpl implements IDeptTCC {
+    @Autowired
+    private IDeptDAO deptDAO; // 直接实现数据层的处理
+    @Override
+    public boolean prepareAdd(BusinessActionContext businessActionContext, DeptDTO dto) {
+        log.info("【第一阶段】xid = {}、dept = {}", businessActionContext.getXid(), dto);
+        // 此时的数据要进行第一阶段的验证，下面是对该数据的简单验证，尝试一下能否使用
+        if (dto.getDname() == null || "".equals(dto.getDname())) {
+            throw new RuntimeException("部门信息错误"); // 手工抛出异常
+        }
+        TCCResultStore.setResult(getClass(), businessActionContext.getXid(), "d");
+        return true;
+    }
+
+    @Override
+    public boolean commit(BusinessActionContext businessActionContext) {
+        // 将接收到的数据以JSONObject的形式返回，而后通过FastJSON的操作将其转为对象实例
+        DeptDTO dept = ((JSONObject)businessActionContext.getActionContext("dept")).toJavaObject(DeptDTO.class);
+        log.info("【第二阶段】事务提交，xid = {}、dept = {}",businessActionContext.getXid(), dept);
+        // 需要根据第一阶段的prepareAdd()方法来决定是否提交
+        if (TCCResultStore.getResult(getClass(),
+                businessActionContext.getXid()) == null) { // 防止重复提交
+            return true;
+        }
+        Dept deptVO = new Dept(); // 创建VO类对象
+        DeepBeanUtils.copyProperties(dept, deptVO); // 属性拷贝
+        try {
+            return this.deptDAO.insert(deptVO) > 0;
+        } finally {
+            TCCResultStore.removeResult(getClass(), businessActionContext.getXid());
+        }
+    }
+
+    @Override
+    public boolean rollback(BusinessActionContext businessActionContext) {
+        DeptDTO dept = ((JSONObject)businessActionContext.getActionContext("dept")).toJavaObject(DeptDTO.class);
+        log.info("【第二阶段】事务回滚，xid = {}、dept = {}",businessActionContext.getXid(), dept);
+        if (TCCResultStore.getResult(getClass(),
+                businessActionContext.getXid()) == null) { // 防止重复提交
+            return true;
+        }
+        TCCResultStore.removeResult(getClass(), businessActionContext.getXid());
+        return true;
+    }
+}
+
+
+4、
+package com.yootk.provider.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.common.util.DeepBeanUtils;
+import com.yootk.provider.dao.IDeptDAO;
+import com.yootk.provider.tcc.IDeptTCC;
+import com.yootk.provider.vo.Dept;
+import com.yootk.service.IDeptService;
+import io.seata.rm.tcc.api.BusinessActionContext;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class DeptServiceImpl implements IDeptService {
+    @Autowired
+    private IDeptDAO deptDAO;
+    @Autowired
+    private IDeptTCC deptTCC; // Seata操作
+    @Override
+    public DeptDTO get(long id) {
+        DeptDTO dto = new DeptDTO(); // 实例化传输对象
+        // 在本地端通过了VO类实现了数据的加载，随后将此数据拷贝到DTO对象之中
+        BeanUtils.copyProperties(this.deptDAO.selectById(id), dto); // 属性拷贝
+        return dto;
+    }
+
+    @Override
+    public boolean add(DeptDTO dto) {
+        return this.deptTCC.prepareAdd(new BusinessActionContext(), dto);
+    }
+
+    @Override
+    public List<DeptDTO> list() {
+        QueryWrapper<Dept> wrapper = new QueryWrapper<>();
+        List<DeptDTO> allDepts = DeepBeanUtils.copyListProperties(
+                this.deptDAO.selectList(wrapper), DeptDTO::new); // 集合数据拷贝
+        return allDepts;
+    }
+
+    @Override
+    public Map<String, Object> split(int currentPage, int lineSize, String column, String keyword) {
+        QueryWrapper<Dept> wrapper = new QueryWrapper<>();
+        wrapper.like(column, keyword); // 设置模糊查询操作
+        int count = this.deptDAO.selectCount(wrapper); // 统计个数
+        // 实现数据的查询处理
+        IPage<Dept> page = this.deptDAO.selectPage(new Page<>(currentPage, lineSize, count), wrapper);
+        Map<String, Object> map = new HashMap<>(); // 包装返回结果
+        map.put("allDepts", DeepBeanUtils.copyListProperties(page.getRecords(), DeptDTO::new));
+        map.put("allRecorders", page.getTotal());
+        map.put("allPages", page.getPages());
+        return map;
+    }
+}
+
+
+5、
+package com.yootk.provider.tcc;
+
+import com.yootk.common.dto.EmpDTO;
+import io.seata.rm.tcc.api.BusinessActionContext;
+import io.seata.rm.tcc.api.BusinessActionContextParameter;
+import io.seata.rm.tcc.api.LocalTCC;
+import io.seata.rm.tcc.api.TwoPhaseBusinessAction;
+
+@LocalTCC
+public interface IEmpTCC { // 雇员TCC操作
+    @TwoPhaseBusinessAction(name="empTCCService", commitMethod = "commit", rollbackMethod = "rollback")
+    public boolean prepareAdd(BusinessActionContext businessActionContext,
+                              @BusinessActionContextParameter(paramName = "emp") EmpDTO emp);
+    public boolean commit(BusinessActionContext businessActionContext);
+    public boolean rollback(BusinessActionContext businessActionContext);
+}
+
+
+6、
+package com.yootk.provider.tcc;
+
+import com.alibaba.fastjson.JSONObject;
+import com.yootk.common.dto.EmpDTO;
+import com.yootk.common.util.DeepBeanUtils;
+import com.yootk.common.util.tcc.TCCResultStore;
+import com.yootk.provider.dao.IEmpDAO;
+import com.yootk.provider.vo.Emp;
+import io.seata.rm.tcc.api.BusinessActionContext;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+public class EmpTCCImpl implements IEmpTCC{
+    @Autowired
+    private IEmpDAO empDAO;
+    @Override
+    public boolean prepareAdd(BusinessActionContext businessActionContext, EmpDTO emp) {
+        log.info("【第一阶段】xid = {}、emp = {}", businessActionContext.getXid(), emp);
+        // 对当前的操作数据进行验证，此时先尝试一下要增加的雇员的ID是否存在
+        if (this.empDAO.selectById(emp.getEmpno()) != null) {
+            throw new RuntimeException("雇员信息已经存在。");
+        }
+        TCCResultStore.setResult(getClass(), businessActionContext.getXid(), "e");
+        return true;
+    }
+
+    @Override
+    public boolean commit(BusinessActionContext businessActionContext) {
+        EmpDTO emp = ((JSONObject) businessActionContext.getActionContext("emp")).toJavaObject(EmpDTO.class);
+        log.info("【第二阶段】事务提交，xid = {}、emp = {}", businessActionContext.getXid(), empDAO);
+        if (TCCResultStore.getResult(getClass(), businessActionContext.getXid()) == null) {
+            return true;
+        }
+        Emp empVO = new Emp();
+        DeepBeanUtils.copyProperties(emp, empVO);
+        try {
+            return this.empDAO.insert(empVO) > 0;
+        } finally {
+            TCCResultStore.removeResult(getClass(), businessActionContext.getXid());
+        }
+    }
+
+    @Override
+    public boolean rollback(BusinessActionContext businessActionContext) {
+        EmpDTO emp = ((JSONObject) businessActionContext.getActionContext("emp")).toJavaObject(EmpDTO.class);
+        log.info("【第二阶段】事务回滚，xid = {}、emp = {}", businessActionContext.getXid(), empDAO);
+        if (TCCResultStore.getResult(getClass(), businessActionContext.getXid()) == null) {
+            return true;
+        }
+        TCCResultStore.removeResult(getClass(), businessActionContext.getXid());
+        return true;
+    }
+}
+
+
+7、
+package com.yootk.provider.service.impl;
+
+import com.yootk.common.dto.EmpDTO;
+import com.yootk.provider.tcc.IEmpTCC;
+import com.yootk.service.IEmpService;
+import io.seata.rm.tcc.api.BusinessActionContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class EmpServiceImpl implements IEmpService {
+    @Autowired
+    private IEmpTCC empTCC;
+    @Override
+    public boolean add(EmpDTO dto) {
+        return this.empTCC.prepareAdd(new BusinessActionContext(), empTCC);
+    }
+}
+
+
+8、
+USE yootk8003;
+DROP TABLE undo_log;
+
+USE yootk8006;
+DROP TABLE undo_log;
+9、
+

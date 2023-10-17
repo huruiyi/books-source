@@ -1,0 +1,126 @@
+1、
+package com.netflix.hystrix;
+public interface HystrixCircuitBreaker {
+    public static class Factory {
+        private static ConcurrentHashMap<String, HystrixCircuitBreaker> circuitBreakersByCommand = new ConcurrentHashMap<String, HystrixCircuitBreaker>(); // 熔断器的缓存
+        public static HystrixCircuitBreaker getInstance(HystrixCommandKey key, HystrixCommandGroupKey group, HystrixCommandProperties properties, HystrixCommandMetrics metrics) {
+            // 判断是否不是第一次访问
+            HystrixCircuitBreaker previouslyCached = circuitBreakersByCommand.get(key.name());
+            if (previouslyCached != null) { // 获取到了中断器
+                return previouslyCached; // 直接返回当前的中断器即可
+            }
+            HystrixCircuitBreaker cbForCommand = 
+circuitBreakersByCommand.putIfAbsent(key.name(), 
+new HystrixCircuitBreakerImpl(key, group, properties, metrics));
+            if (cbForCommand == null) { // 创建的中断器为空
+                return circuitBreakersByCommand.get(key.name());// 返回集合中的数据
+            } else {
+                return cbForCommand; // 返回创建完成的中断器
+            }
+        }
+        public static HystrixCircuitBreaker getInstance(HystrixCommandKey key) {
+            return circuitBreakersByCommand.get(key.name());
+        }
+        static void reset() {
+            circuitBreakersByCommand.clear();
+        }
+    }
+}
+
+
+2、
+package com.netflix.hystrix;
+public interface HystrixCircuitBreaker {
+    static class HystrixCircuitBreakerImpl implements HystrixCircuitBreaker { // 中断器实现类
+        private final HystrixCommandProperties properties; // 获取Hystrix属性，得到阈值
+        private final HystrixCommandMetrics metrics; // Hystrix度量统计
+        private AtomicBoolean circuitOpen = new AtomicBoolean(false); // 中断开关
+        private AtomicLong circuitOpenedOrLastTestedTime = new AtomicLong();// 半开的检查
+        protected HystrixCircuitBreakerImpl(HystrixCommandKey key, HystrixCommandGroupKey commandGroup, HystrixCommandProperties properties, HystrixCommandMetrics metrics) {
+            this.properties = properties;
+            this.metrics = metrics;
+        }
+        public void markSuccess() { // 调用成功的标记
+            if (circuitOpen.get()) { // 判断中断器状态（开启状态）
+                if (circuitOpen.compareAndSet(true, false)) { // CAS操作
+                    metrics.resetStream();// 度量的重置
+                }
+            }
+        }
+        @Override
+        public boolean allowRequest() { // 允许访问的控制
+            if (properties.circuitBreakerForceOpen().get()) { // 强制性中断开启配置
+                return false; // 不允许
+            }
+            if (properties.circuitBreakerForceClosed().get()) { // 强制性中断关闭配置
+                isOpen();
+                return true; // 不启用中断器
+            }
+            return !isOpen() || allowSingleTest();// 测试以及打开的控制
+        }
+        public boolean allowSingleTest() { // 根据度量的结果来测试是否允许关闭中断器（半开）
+            long timeCircuitOpenedOrWasLastTested = circuitOpenedOrLastTestedTime.get();
+            if (circuitOpen.get() && System.currentTimeMillis() > timeCircuitOpenedOrWasLastTested + properties.circuitBreakerSleepWindowInMilliseconds().get()) {
+                // We push the 'circuitOpenedTime' ahead by 'sleepWindow' since we have allowed one request to try.
+                // If it succeeds the circuit will be closed, otherwise another singleTest will be allowed at the end of the 'sleepWindow'.
+                if (circuitOpenedOrLastTestedTime.compareAndSet(timeCircuitOpenedOrWasLastTested, System.currentTimeMillis())) {
+                    // if this returns true that means we set the time so we'll return true to allow the singleTest
+                    // if it returned false it means another thread raced us and allowed the singleTest before we did
+                    return true;
+                }
+            }
+            return false;
+        }
+        @Override
+        public boolean isOpen() { // 开启状态判断
+            if (circuitOpen.get()) { // 中断器状态
+                // if we're open we immediately return true and don't bother attempting to 'close' ourself as that is left to allowSingleTest and a subsequent successful test to close
+                return true;
+            }
+            // we're closed, so let's see if errors have made us so we should trip the circuit open
+            HealthCounts health = metrics.getHealthCounts();// 健康统计
+            // check if we are past the statisticalWindowVolumeThreshold
+            if (health.getTotalRequests() < properties.circuitBreakerRequestVolumeThreshold().get()) {
+                // we are not past the minimum volume threshold for the statisticalWindow so we'll return false immediately and not calculate anything
+                return false;
+            }
+            if (health.getErrorPercentage() < properties.circuitBreakerErrorThresholdPercentage().get()) {
+                return false;
+            } else {
+                // our failure rate is too high, trip the circuit
+                if (circuitOpen.compareAndSet(false, true)) {
+                    // if the previousValue was false then we want to set the currentTime
+                    circuitOpenedOrLastTestedTime.set(System.currentTimeMillis());
+                    return true;
+                } else {
+                    // How could previousValue be true? If another thread was going through this code at the same time a race-condition could have
+                    // caused another thread to set it to true already even though we were in the process of doing the same
+                    // In this case, we know the circuit is open, so let the other thread set the currentTime and report back that the circuit is open
+                    return true;
+                }
+            }
+        }
+    }
+}
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

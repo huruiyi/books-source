@@ -1,0 +1,145 @@
+1、
+// https://mvnrepository.com/artifact/io.micrometer/micrometer-registry-prometheus
+implementation group: 'io.micrometer', name: 'micrometer-registry-prometheus', version: '1.7.0'
+// https://mvnrepository.com/artifact/io.micrometer/micrometer-core
+implementation group: 'io.micrometer', name: 'micrometer-core', version: '1.7.0'
+
+
+2、
+ext.versions = [                // 定义全部的依赖库版本号
+    springboot           : '2.2.5.RELEASE',      // SpringBoot版本号
+    springcloud          : 'Hoxton.SR3', // SpringCloud版本号
+    alibabacloud         : '2.2.1.RELEASE', // SpringCloudAlibaba版本号
+    lombok               : '1.18.20', // Lombok版本号
+    junit                : '5.6.3', // 配置JUnit测试工具的版本编号
+    junitPlatformLauncher: '1.6.3',  // JUnit测试工具运行平台版本编号
+    mybatisPlus          : '3.4.3', // MyBatisPlus的版本号
+    mysql                : '8.0.25', // MySQL数据库驱动版本
+    druid                : '1.2.6', // Druid版本号
+    swagger              : '3.0.0', // Swagger版本号
+    nacos                : '2.0.2', // Nacos版本号
+    httpclient           : '4.5.13', // HttpClient版本号
+    feignHttpclient      : '11.6', // FeignHttpClient版本号
+    sentinel             : '1.8.2', // Sentinel版本号
+    caffeine             : '3.0.4', // Caffeine缓存组件版本号
+    micrometer           : '1.7.0', // Prometheus相关监控依赖，与服务部署的版本号相同
+]
+ext.libraries = [            // 依赖库引入配置
+     'spring-boot-gradle-plugin'        :
+             "org.springframework.boot:spring-boot-gradle-plugin:${versions.springboot}",
+     'spring-cloud-dependencies'        :
+             "org.springframework.cloud:spring-cloud-dependencies:${versions.springcloud}",
+     'spring-cloud-alibaba-dependencies':
+             "com.alibaba.cloud:spring-cloud-alibaba-dependencies:${versions.alibabacloud}",
+     // 以下的配置为与项目用例测试有关的依赖
+     'junit-jupiter-api'                :
+             "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
+     'junit-vintage-engine'             :
+             "org.junit.vintage:junit-vintage-engine:${versions.junit}",
+     'junit-jupiter-engine'             :
+             "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+     'junit-platform-launcher'          :
+             "org.junit.platform:junit-platform-launcher:${versions.junitPlatformLauncher}",
+     'junit-platform-engine'            :
+             "org.junit.platform:junit-platform-engine:${versions.junitPlatformLauncher}",
+     'junit-jupiter-params'             :
+             "org.junit.jupiter:junit-jupiter-params:${versions.junit}",
+     'junit-bom'                        : "org.junit:junit-bom:${versions.junit}",
+     'junit-platform-commons'           :
+             "org.junit.platform:junit-platform-commons:${versions.junitPlatformLauncher}",
+     // 以下的配置为Lombok组件有关的依赖
+     'lombok'                           : "org.projectlombok:lombok:${versions.lombok}",
+     // 以下的配置为数据库开发有关的依赖
+     'mybatis-plus-boot-starter'        : "com.baomidou:mybatis-plus-boot-starter:${versions.mybatisPlus}",
+     'mysql-connector-java'             : "mysql:mysql-connector-java:${versions.mysql}",
+     'druid'                            : "com.alibaba:druid:${versions.druid}",
+     // 以下的配置为Swagger有关的依赖库
+    'springfox-boot-starter'            : "io.springfox:springfox-boot-starter:${versions.swagger}",
+     // 以下的配置为Nacos有关的依赖库
+    'nacos-client'                      : "com.alibaba.nacos:nacos-client:${versions.nacos}",
+    // 以下的配置为Feign与HttpClient有关的依赖库
+    'httpclient'                        : "org.apache.httpcomponents:httpclient:${versions.httpclient}",
+    'feign-httpclient'                  : "io.github.openfeign:feign-httpclient:${versions.feignHttpclient}",
+    // 以下的配置为Sentinel有关的组件依赖
+    'sentinel-datasource-nacos'         : "com.alibaba.csp:sentinel-datasource-nacos:${versions.sentinel}",
+    // 以下的配置为LoadBalancer所需要的Caffeine组件有关依赖
+    'caffeine'                          : "com.github.ben-manes.caffeine:caffeine:${versions.caffeine}",
+    // 以下的配置为Prometheus服务整合
+    'micrometer-registry-prometheus': "io.micrometer:micrometer-registry-prometheus:${versions.micrometer}",
+    'micrometer-core': "io.micrometer:micrometer-core:${versions.micrometer}",
+]
+
+
+3、
+project(":gateway-9501") {  // 网关模块
+    dependencies {
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+        implementation('org.springframework.cloud:spring-cloud-starter-gateway') // 网关依赖
+        implementation('org.springframework.boot:spring-boot-starter-actuator') // Actuator依赖库
+        implementation('org.springframework.cloud:spring-cloud-starter-loadbalancer')
+        implementation(libraries.'caffeine')
+        implementation(libraries.'micrometer-registry-prometheus')
+        implementation(libraries.'micrometer-core')
+    }
+}
+
+4、
+spring:
+  application:
+    name: microcloud.gateway # 网关名称
+  cloud: # Cloud配置
+    loadbalancer:
+      ribbon:
+        enabled: false # 关闭默认配置
+    nacos: # Nacos注册中心配置
+      discovery: # 发现服务
+        server-addr: nacos-server:8848 # Nacos服务地址
+        namespace: 96c23d77-8d08-4648-b750-1217845607ee # 命名空间ID
+        group: MICROCLOUD_GROUP # 一般建议大写
+        cluster-name: MuyanGateway # 配置集群名称
+        username: muyan # 用户名
+        password: yootk # 密码
+    gateway: # 网关配置
+      metrics:
+        enabled: true # 启用服务监控
+
+5、
+gateway-9501:9090/actuator/metrics/gateway.requests
+
+6、
+vi /usr/local/prometheus/prometheus.yml
+
+7、
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+scrape_configs:
+  - job_name: 'microcloud'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+       - targets: ['gateway-server:9090']
+
+
+8、
+/usr/local/prometheus/promtool check config /usr/local/prometheus/prometheus.yml
+
+9、
+systemctl start prometheus
+
+10、
+netstat -nptl
+
+11、
+http://prometheus-server:9999/
+
+12、
+systemctl start grafana
+
+13、
+http://grafana-server:3000
+

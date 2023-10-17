@@ -1,0 +1,147 @@
+1、
+// https://mvnrepository.com/artifact/com.alibaba.nacos/nacos-client
+implementation group: 'com.alibaba.nacos', name: 'nacos-client', version: '2.0.2'
+
+
+2、
+ext.versions = [                // 定义全部的依赖库版本号
+    springboot           : '2.2.5.RELEASE',      // SpringBoot版本号
+    springcloud          : 'Hoxton.SR3', // SpringCloud版本号
+    alibabacloud         : '2.2.1.RELEASE', // SpringCloudAlibaba版本号
+    lombok               : '1.18.20', // Lombok版本号
+    junit                : '5.6.3', // 配置JUnit测试工具的版本编号
+    junitPlatformLauncher: '1.6.3',  // JUnit测试工具运行平台版本编号
+    mybatisPlus          : '3.4.3', // MyBatisPlus的版本号
+    mysql                : '8.0.25', // MySQL数据库驱动版本
+    druid                : '1.2.6', // Druid版本号
+    swagger              : '3.0.0', // Swagger版本号
+    nacos                : '2.0.2', // Nacos版本号
+]
+ext.libraries = [            // 依赖库引入配置
+     'spring-boot-gradle-plugin'        :
+             "org.springframework.boot:spring-boot-gradle-plugin:${versions.springboot}",
+     'spring-cloud-dependencies'        :
+             "org.springframework.cloud:spring-cloud-dependencies:${versions.springcloud}",
+     'spring-cloud-alibaba-dependencies':
+             "com.alibaba.cloud:spring-cloud-alibaba-dependencies:${versions.alibabacloud}",
+     // 以下的配置为与项目用例测试有关的依赖
+     'junit-jupiter-api'                :
+             "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
+     'junit-vintage-engine'             :
+             "org.junit.vintage:junit-vintage-engine:${versions.junit}",
+     'junit-jupiter-engine'             :
+             "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+     'junit-platform-launcher'          :
+             "org.junit.platform:junit-platform-launcher:${versions.junitPlatformLauncher}",
+     'junit-platform-engine'            :
+             "org.junit.platform:junit-platform-engine:${versions.junitPlatformLauncher}",
+     'junit-jupiter-params'             :
+             "org.junit.jupiter:junit-jupiter-params:${versions.junit}",
+     'junit-bom'                        : "org.junit:junit-bom:${versions.junit}",
+     'junit-platform-commons'           :
+             "org.junit.platform:junit-platform-commons:${versions.junitPlatformLauncher}",
+     // 以下的配置为Lombok组件有关的依赖
+     'lombok'                           : "org.projectlombok:lombok:${versions.lombok}",
+     // 以下的配置为数据库开发有关的依赖
+     'mybatis-plus-boot-starter'        : "com.baomidou:mybatis-plus-boot-starter:${versions.mybatisPlus}",
+     'mysql-connector-java'             : "mysql:mysql-connector-java:${versions.mysql}",
+     'druid'                            : "com.alibaba:druid:${versions.druid}",
+     // 以下的配置为Swagger有关的依赖库
+    'springfox-boot-starter'            : "io.springfox:springfox-boot-starter:${versions.swagger}",
+     // 以下的配置为Nacos有关的依赖库
+    'nacos-client'                      : "com.alibaba.nacos:nacos-client:${versions.nacos}"
+]
+
+
+3、
+project(":nacos-example") { // Nacos核心的讲解模块
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation(libraries.'nacos-client') // Nacos标准模块
+    }
+}
+
+4、
+package com.yootk.nacos;
+
+import com.alibaba.nacos.api.NacosFactory;
+import com.alibaba.nacos.api.PropertyKeyConst;
+import com.alibaba.nacos.api.config.ConfigService;
+
+import java.util.Properties;
+
+public class PublishNacosConfig {   // 发布Nacos配置项
+    public static final String NACOS_SERVER = "nacos-server:8848"; // Naco连接地址
+    // 此时的命名空间使用的是自定义命名空间（名称为“muyan”，去Nacos中查找）
+    public static final String NAMESPACE = "0007211f-2731-495f-bf7e-6845bda78727"; // 命名空间
+    public static final String GROUP = "MICROCLOUD_GROUP"; // 分组
+    public static final String DATA_ID = "com.yootk.nacos.microcloud.config"; // 存储的KEY
+    public static void main(String[] args) throws Exception { // 沐言科技：www.yootk.com
+        String content = "edu.yootk.com"; // 要保存的配置项内容
+        Properties properties = new Properties(); // 将Nacos的相关属性进行配置
+        // 如果要想进行属性的配置，则一定要注意属性的KEY的名称
+        properties.put(PropertyKeyConst.SERVER_ADDR, NACOS_SERVER); // 服务地址属性
+        properties.put(PropertyKeyConst.NAMESPACE, NAMESPACE); // 命名空间
+        // 创建完连接之后，会将此连接包装为ConfigService对象实例返回，这里面实现各种数据操作
+        ConfigService configService = NacosFactory.createConfigService(properties); // 创建配置实例
+        boolean isOk = configService.publishConfig(DATA_ID, GROUP, content); // 发布配置项
+        System.out.println(isOk ? "Nacos配置项发布成功！" : "Nacos配置项发布失败！");
+    }
+}
+
+
+5、
+package com.yootk.nacos;
+
+import com.alibaba.nacos.api.NacosFactory;
+import com.alibaba.nacos.api.PropertyKeyConst;
+import com.alibaba.nacos.api.config.ConfigService;
+import com.alibaba.nacos.api.config.listener.Listener;
+
+import java.util.Properties;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+
+public class NacosConfigListener {   // 发布Nacos配置项
+    public static final String NACOS_SERVER = "nacos-server:8848"; // Naco连接地址
+    // 此时的命名空间使用的是自定义命名空间（名称为“muyan”，去Nacos中查找）
+    public static final String NAMESPACE = "0007211f-2731-495f-bf7e-6845bda78727"; // 命名空间
+    public static final String GROUP = "MICROCLOUD_GROUP"; // 分组
+    public static final String DATA_ID = "com.yootk.nacos.microcloud.config"; // 存储的KEY
+    public static void main(String[] args) throws Exception { // 沐言科技：www.yootk.com
+        Properties properties = new Properties(); // 将Nacos的相关属性进行配置
+        // 如果要想进行属性的配置，则一定要注意属性的KEY的名称
+        properties.put(PropertyKeyConst.SERVER_ADDR, NACOS_SERVER); // 服务地址属性
+        properties.put(PropertyKeyConst.NAMESPACE, NAMESPACE); // 命名空间
+        // 创建完连接之后，会将此连接包装为ConfigService对象实例返回，这里面实现各种数据操作
+        ConfigService configService = NacosFactory.createConfigService(properties); // 创建配置实例
+        String content = configService.getConfig(DATA_ID, GROUP, 50000); // 获取配置项
+        System.err.println("【初始化配置】" + DATA_ID + " = " + content);
+        // 一般来讲是在服务启动的时候进行配置数据的读取，但是也需要提供有配置数据的更新
+        configService.addListener(DATA_ID, GROUP, new Listener() {
+            @Override
+            public Executor getExecutor() {
+                return null;
+            }
+
+            @Override
+            public void receiveConfigInfo(String configInfo) { // 每当更新后可以自动的接收更新
+                System.err.println("【配置项更新】" + DATA_ID + " = " + configInfo);
+            }
+        });
+        TimeUnit.MINUTES.sleep(Long.MAX_VALUE); // 持续休眠
+    }
+}
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

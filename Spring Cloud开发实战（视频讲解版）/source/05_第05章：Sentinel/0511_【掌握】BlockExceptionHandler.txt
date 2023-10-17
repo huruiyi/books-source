@@ -1,0 +1,80 @@
+1、
+package com.yootk.provider.action.block;
+
+import com.alibaba.csp.sentinel.adapter.spring.webmvc.callback.BlockExceptionHandler;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
+import com.alibaba.csp.sentinel.slots.block.authority.AuthorityException;
+import com.alibaba.csp.sentinel.slots.block.degrade.DegradeException;
+import com.alibaba.csp.sentinel.slots.block.flow.FlowException;
+import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowException;
+import com.alibaba.csp.sentinel.slots.system.SystemBlockException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
+import org.springframework.util.MimeTypeUtils;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.HashMap;
+import java.util.Map;
+
+@Component
+public class SentinelBlockExceptionHandler implements BlockExceptionHandler {
+    @Override
+    public void handle(HttpServletRequest request,
+                       HttpServletResponse response, BlockException e) throws Exception {
+        Map<String, Object> errors = new HashMap<>(); // 数据的保存
+        errors.put("type", e.getClass().getName()); // 异常的类型
+        // 之所以这样编写是为了帮助大家加深关于Sentinel组件内部提供的异常类型
+        if (e instanceof FlowException) {
+            errors.put("message", "服务限流");
+        } else if (e instanceof DegradeException) {
+            errors.put("message", "服务降级");
+        } else if (e instanceof ParamFlowException) {
+            errors.put("message", "热点参数限流");
+        } else if (e instanceof SystemBlockException) {
+            errors.put("message", "系统拦截");
+        } else if (e instanceof AuthorityException) {
+            errors.put("message", "授权拦截");
+        } else {
+            errors.put("message", "其他异常");
+        }
+        errors.put("path", request.getRequestURI()); // 产生异常的路径
+        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 状态码
+        response.setCharacterEncoding("UTF-8"); // 设置响应编码
+        response.setHeader("Content-Type", MimeTypeUtils.APPLICATION_JSON_VALUE); // JSON直接响应
+        new ObjectMapper().writeValue(response.getWriter(), errors); // Jackson组件的输出
+    }
+}
+
+
+2、
+    // @SentinelResource(value = "/dept_get", fallback = "getFallback", blockHandlerClass = DeptBlockHandler.class, blockHandler = "getBlockHandler")
+    @ApiOperation(value = "部门查询", notes = "根据部门编号查询部门详细信息")
+    @GetMapping("get/{id}")
+    public Object get(@PathVariable("id") long id) {
+        if (id % 2 == 0) {   // 查询ID为偶数
+            throw new RuntimeException("查询iD不能为偶数！");
+        }
+        this.printRequestHeaders("get");
+        return this.deptService.get(id);
+    }
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

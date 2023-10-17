@@ -1,0 +1,100 @@
+1、
+package org.springframework.cloud.netflix.hystrix;
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnClass({ Hystrix.class })
+@ConditionalOnProperty(name = "spring.cloud.circuitbreaker.hystrix.enabled",
+      matchIfMissing = true) // 没有配置此项的时候也是启用的
+public class HystrixCircuitBreakerAutoConfiguration {
+   @Autowired(required = false) // Hystrix熔断工厂类集合
+   private List<Customizer<HystrixCircuitBreakerFactory>> customizers = new ArrayList<>();
+   @Bean
+   @ConditionalOnMissingBean(CircuitBreakerFactory.class)
+   public CircuitBreakerFactory hystrixCircuitBreakerFactory() { // 熔断工厂类创建
+      HystrixCircuitBreakerFactory factory = new HystrixCircuitBreakerFactory();
+      customizers.forEach(customizer -> customizer.customize(factory));
+      return factory;
+   }
+}
+
+
+2、
+package com.netflix.hystrix;
+public abstract class HystrixCommandProperties {
+    private static final Logger logger = 
+			LoggerFactory.getLogger(HystrixCommandProperties.class);
+    /* defaults */
+    /* package */ static final Integer default_metricsRollingStatisticalWindow = 10000;// default => statisticalWindow: 10000 = 10 seconds (and default of 10 buckets so each bucket is 1 second)
+    private static final Integer default_metricsRollingStatisticalWindowBuckets = 10;// default => statisticalWindowBuckets: 10 = 10 buckets in a 10 second window so each bucket is 1 second
+    private static final Integer default_circuitBreakerRequestVolumeThreshold = 20;// default => statisticalWindowVolumeThreshold: 20 requests in 10 seconds must occur before statistics matter
+    private static final Integer default_circuitBreakerSleepWindowInMilliseconds = 5000;// default => sleepWindow: 5000 = 5 seconds that we will sleep before trying again after tripping the circuit
+    private static final Integer default_circuitBreakerErrorThresholdPercentage = 50;// default => errorThresholdPercentage = 50 = if 50%+ of requests in 10 seconds are failures or latent then we will trip the circuit
+    private static final Boolean default_circuitBreakerForceOpen = false;// default => forceCircuitOpen = false (we want to allow traffic)
+    /* package */ static final Boolean default_circuitBreakerForceClosed = false;// default => ignoreErrors = false 
+    private static final Integer default_executionTimeoutInMilliseconds = 1000; // default => executionTimeoutInMilliseconds: 1000 = 1 second
+    private static final Boolean default_executionTimeoutEnabled = true;
+    private static final ExecutionIsolationStrategy default_executionIsolationStrategy = 
+ExecutionIsolationStrategy.THREAD;
+    private static final Boolean default_executionIsolationThreadInterruptOnTimeout = true;
+    private static final Boolean default_executionIsolationThreadInterruptOnFutureCancel = false;
+    private static final Boolean default_metricsRollingPercentileEnabled = true;
+    private static final Boolean default_requestCacheEnabled = true;
+    private static final Integer default_fallbackIsolationSemaphoreMaxConcurrentRequests = 10;
+    private static final Boolean default_fallbackEnabled = true;
+    private static final Integer default_executionIsolationSemaphoreMaxConcurrentRequests = 10;
+    private static final Boolean default_requestLogEnabled = true;
+    private static final Boolean default_circuitBreakerEnabled = true;
+    private static final Integer default_metricsRollingPercentileWindow = 60000; // default to 1 minute for RollingPercentile 
+    private static final Integer default_metricsRollingPercentileWindowBuckets = 6; // default to 6 buckets (10 seconds each in 60 second window)
+    private static final Integer default_metricsRollingPercentileBucketSize = 100; // default to 100 values max per bucket
+    private static final Integer default_metricsHealthSnapshotIntervalInMilliseconds = 500; // default to 500ms as max frequency between allowing snapshots of health (error percentage etc)
+    @SuppressWarnings("unused") private final HystrixCommandKey key;
+    private final HystrixProperty<Integer> circuitBreakerRequestVolumeThreshold; // number of requests that must be made within a statisticalWindow before open/close decisions are made using stats
+    private final HystrixProperty<Integer> circuitBreakerSleepWindowInMilliseconds; // milliseconds after tripping circuit before allowing retry
+    private final HystrixProperty<Boolean> circuitBreakerEnabled; // Whether circuit breaker should be enabled.
+    private final HystrixProperty<Integer> circuitBreakerErrorThresholdPercentage; // % of 'marks' that must be failed to trip the circuit
+    private final HystrixProperty<Boolean> circuitBreakerForceOpen; // a property to allow forcing the circuit open (stopping all requests)
+    private final HystrixProperty<Boolean> circuitBreakerForceClosed; // a property to allow ignoring errors and therefore never trip 'open' (ie. allow all traffic through)
+    private final HystrixProperty<ExecutionIsolationStrategy> executionIsolationStrategy; // Whether a command should be executed in a separate thread or not.
+    private final HystrixProperty<Integer> executionTimeoutInMilliseconds; // Timeout value in milliseconds for a command
+    private final HystrixProperty<Boolean> executionTimeoutEnabled; //Whether timeout should be triggered
+    private final HystrixProperty<String> executionIsolationThreadPoolKeyOverride; // What thread-pool this command should run in (if running on a separate thread).
+    private final HystrixProperty<Integer> executionIsolationSemaphoreMaxConcurrentRequests; // Number of permits for execution semaphore
+    private final HystrixProperty<Integer> fallbackIsolationSemaphoreMaxConcurrentRequests; // Number of permits for fallback semaphore
+    private final HystrixProperty<Boolean> fallbackEnabled; // Whether fallback should be attempted.
+    private final HystrixProperty<Boolean> executionIsolationThreadInterruptOnTimeout; // Whether an underlying Future/Thread (when runInSeparateThread == true) should be interrupted after a timeout
+    private final HystrixProperty<Boolean> executionIsolationThreadInterruptOnFutureCancel; // Whether canceling an underlying Future/Thread (when runInSeparateThread == true) should interrupt the execution thread
+    private final HystrixProperty<Integer> metricsRollingStatisticalWindowInMilliseconds; // milliseconds back that will be tracked
+    private final HystrixProperty<Integer> metricsRollingStatisticalWindowBuckets; // number of buckets in the statisticalWindow
+    private final HystrixProperty<Boolean> metricsRollingPercentileEnabled; // Whether monitoring should be enabled (SLA and Tracers).
+    private final HystrixProperty<Integer> metricsRollingPercentileWindowInMilliseconds; // number of milliseconds that will be tracked in RollingPercentile
+    private final HystrixProperty<Integer> metricsRollingPercentileWindowBuckets; // number of buckets percentileWindow will be divided into
+    private final HystrixProperty<Integer> metricsRollingPercentileBucketSize; // how many values will be stored in each percentileWindowBucket
+    private final HystrixProperty<Integer> metricsHealthSnapshotIntervalInMilliseconds; // time between health snapshots
+    private final HystrixProperty<Boolean> requestLogEnabled; // whether command request logging is enabled.
+    private final HystrixProperty<Boolean> requestCacheEnabled; // Whether request caching is enabled.
+    public static enum ExecutionIsolationStrategy {
+        THREAD, SEMAPHORE	// 线程的资源隔离以及信号量的资源隔离
+     }
+}
+
+
+3、
+
+
+4、
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

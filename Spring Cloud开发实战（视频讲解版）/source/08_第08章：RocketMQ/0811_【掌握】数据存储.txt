@@ -1,0 +1,70 @@
+1、
+tree /usr/local/rocketmq/store/
+
+
+2、
+http://rocketmq.apache.org/docs/rmq-deployment/
+
+3、
+package org.apache.rocketmq.store.index;
+public class IndexFile {
+    private static int hashSlotSize = 4; 			// Hash插槽个数
+    private static int indexSize = 20; 			// 索引长度
+    private static int invalidIndex = 0; 			// 无效索引个数
+    private final int hashSlotNum; 			// Hash插槽个数
+    private final int indexNum; 				// 索引个数
+    private final MappedFile mappedFile; 			// 内存文件映射（NIO）
+    private final FileChannel fileChannel; 			// NIO中的文件处理通道
+    private final MappedByteBuffer mappedByteBuffer; 	// NIO中的内存映射
+    private final IndexHeader indexHeader; 			// 索引头信息
+}
+
+
+4、
+package org.apache.rocketmq.store;
+public interface MessageStore {
+    default CompletableFuture<PutMessageResult> asyncPutMessages(final MessageExtBatch messageExtBatch) { // 异步消息存储
+        return CompletableFuture.completedFuture(putMessages(messageExtBatch));
+    }
+    PutMessageResult putMessage(final MessageExtBrokerInner msg); // 同步消息存储
+}
+
+
+5、
+@Override
+public CompletableFuture<PutMessageResult> asyncPutMessage(MessageExtBrokerInner msg) {
+    PutMessageStatus checkStoreStatus = this.checkStoreStatus(); // 检查存储的状态
+    if (checkStoreStatus != PutMessageStatus.PUT_OK) {  // 状态OK
+        return CompletableFuture.completedFuture(new PutMessageResult(checkStoreStatus, null));
+    }
+    PutMessageStatus msgCheckStatus = this.checkMessage(msg); // 消息检查
+    if (msgCheckStatus == PutMessageStatus.MESSAGE_ILLEGAL) { // 有问题的消息
+        return CompletableFuture.completedFuture(new PutMessageResult(msgCheckStatus, null));
+    }
+    long beginTime = this.getSystemClock().now(); // 开始时间戳
+    CompletableFuture<PutMessageResult> putResultFuture = this.commitLog.asyncPutMessage(msg);
+    putResultFuture.thenAccept((result) -> { // 消息处理
+        long elapsedTime = this.getSystemClock().now() - beginTime; // 耗费时间
+        if (elapsedTime > 500) { // 时间过长，发出日志警报
+            log.warn("putMessage not in lock elapsed time(ms)={}, bodyLength={}", elapsedTime, msg.getBody().length);
+        }
+        this.storeStatsService.setPutMessageEntireTimeMax(elapsedTime); // 信息的记录
+        if (null == result || !result.isOk()) { // 消息的处理失败
+            this.storeStatsService.getPutMessageFailedTimes().incrementAndGet(); // 错误的计数
+        }
+    });
+    return putResultFuture;
+}
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

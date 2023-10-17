@@ -1,0 +1,330 @@
+1、
+package com.yootk.jwt.util;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yootk.jwt.service.ITokenService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.*;
+
+// 所有的数据最终都是通过JSON的形式设置在JWT附加数据之中的
+public class JWTMemberDataService { // 自定义的数据的解析类
+    @Autowired
+    private ITokenService tokenService;
+    @Autowired
+    private ObjectMapper objectMapper; // 解析JSON数据为Map集合
+
+    public Map<String, String> headers(String token) {  // 通过JWT解析所有的头信息
+        Jws<Claims> claimsJws = this.tokenService.parseToken(token);
+        Map<String, String> headers = new HashMap<>(); // 保存所有的头信息的集合
+        claimsJws.getHeader().forEach((key, value) -> { // 将JWT头信息转为Map
+            headers.put(key.toString(), value.toString()); // 数据以String的方式存储
+        });
+        return headers;
+    }
+    public Set<String> roles(String token) {    // 解析全部的角色数据
+        Jws<Claims> claimsJws = this.tokenService.parseToken(token);
+        try {
+            Map<String, List<String>> map = this.objectMapper.readValue(claimsJws.getBody().getSubject(), Map.class);
+            Set<String> roles = new HashSet<>();
+            roles.addAll(map.get("roles")); // 将获取的全部角色保存在Set集合
+            return roles;
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public Set<String> actions(String token) {    // 解析全部的权限数据
+        Jws<Claims> claimsJws = this.tokenService.parseToken(token);
+        try {
+            Map<String, List<String>> map = this.objectMapper.readValue(claimsJws.getBody().getSubject(), Map.class);
+            Set<String> actions = new HashSet<>();
+            actions.addAll(map.get("actions")); // 将获取的全部角色保存在Set集合
+            return actions;
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public String id(String token) {
+        Jws<Claims> claimsJws = this.tokenService.parseToken(token);
+        return claimsJws.getBody().getId();
+    }
+    public String getToken(HttpServletRequest request, String name) {  // Token获取
+        String token = request.getParameter(name); // name为参数的名称
+        if (token == null || "".equals(token)) {    // 无法通过参数获取数据
+            token = request.getHeader(name); // 通过头信息传递
+        }
+        return token;
+    }
+}
+
+
+2、
+package com.yootk.jwt.autoconfig;
+
+import com.yootk.jwt.config.EncryptConfigProperties;
+import com.yootk.jwt.config.JWTConfigProperties;
+import com.yootk.jwt.service.IEncryptService;
+import com.yootk.jwt.service.ITokenService;
+import com.yootk.jwt.service.impl.EncryptServiceImpl;
+import com.yootk.jwt.service.impl.TokenServiceImpl;
+import com.yootk.jwt.util.JWTMemberDataService;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+@EnableConfigurationProperties({JWTConfigProperties.class, EncryptConfigProperties.class}) // 配置注入属性
+public class JWTAutoConfiguration {
+    @Bean("tokenService")
+    public ITokenService getTokenServiceBean() {
+        return new TokenServiceImpl();
+    }
+    @Bean("encryptService")
+    public IEncryptService getEncryptServiceBean() {
+        return new EncryptServiceImpl();
+    }
+    @Bean("memberDataService")
+    public JWTMemberDataService getMemberDataService() {
+        return new JWTMemberDataService();
+    }
+}
+
+
+3、
+package com.yootk.jwt.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target({ElementType.METHOD}) // 在方法上使用
+@Retention(RetentionPolicy.RUNTIME) // 运行时生效
+public @interface JWTCheckToken {
+    boolean required() default true; // 配置的启用，认证排查
+    String role() default ""; // 角色检查
+    String action() default ""; // 权限检查
+}
+
+
+4、
+project(":provider-dept-8002") {    // 部门微服务
+    dependencies {
+        implementation(project(":common-api")) // 导入公共的子模块
+        implementation(project(":yootk-starter-jwt")) // 导入JWT子模块
+        implementation(libraries.'mybatis-plus-boot-starter')
+        implementation(libraries.'mysql-connector-java')
+        implementation(libraries.'druid')
+        implementation(libraries.'springfox-boot-starter')
+        implementation('org.springframework.boot:spring-boot-starter-security')
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel')
+        // 以下的依赖库为Nacos注册中心所需要的依赖配置
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation('com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config') {
+            exclude group: 'com.alibaba.nacos', module: 'nacos-client' // 移除旧版本的Nacos依赖
+        }
+        implementation(libraries.'nacos-client') // 引入与当前的Nacos匹配的依赖库
+    }
+}
+
+5、
+package com.yootk.provider.action;
+
+import com.yootk.common.dto.DeptDTO;
+import com.yootk.jwt.annotation.JWTCheckToken;
+import com.yootk.service.IDeptService;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.Enumeration;
+
+@RestController
+@RequestMapping("/provider/dept/*") // 微服务提供者父路径
+@Slf4j // 使用一个注解
+public class DeptAction {
+    @Autowired
+    private IDeptService deptService;
+    @ApiOperation(value="部门查询", notes = "根据部门编号查询部门详细信息")
+    @GetMapping("get/{id}")
+    @JWTCheckToken(role="dept") // 进行JWT的角色检查
+    public Object get(@PathVariable("id") long id) {
+        this.printRequestHeaders("get");
+        return this.deptService.get(id);
+    }
+    @ApiOperation(value="部门增加", notes = "增加新的部门信息")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "deptDTO", required = true,
+                    dataType = "DeptDTO", value = "部门传输对象实例")
+    })
+    @PostMapping("add")
+    public Object add(@RequestBody  DeptDTO deptDTO) {    // 后面会修改参数模式为JSON
+        this.printRequestHeaders("add");
+        return this.deptService.add(deptDTO);
+    }
+    @ApiOperation(value="部门列表", notes = "查询部门的完整信息")
+    @GetMapping("list")
+    @JWTCheckToken(action = "dept:list") // 权限检查
+    public Object list() {
+        this.printRequestHeaders("list");
+        return this.deptService.list();
+    }
+    @ApiOperation(value="部门分页查询", notes = "根据指定的数据库参数实现部门数据的分页加载")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name="cp", value = "当前所在页", required = true, dataType = "int"),
+            @ApiImplicitParam(name="ls", value = "每页显示的数据行数", required = true, dataType = "int"),
+            @ApiImplicitParam(name="col", value = "模糊查询列", required = true, dataType = "String"),
+            @ApiImplicitParam(name="kw", value = "模糊查询关键字", required = true, dataType = "String")
+    })
+    @GetMapping("split")
+    @JWTCheckToken // 只要追加了此注解就表示要进行JWT有效性检查
+    public Object split(int cp, int ls, String col, String kw) {
+        this.printRequestHeaders("split");
+        return this.deptService.split(cp, ls, col, kw);
+    }
+    @GetMapping("message")
+    public Object message(String message) { // 接收参数
+        log.info("接收到请求参数，message = {}", message);
+        printRequestHeaders("message");
+        return message;
+    }
+    private void printRequestHeaders(String restName) {    // 实现所有请求头信息的输出
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+        Enumeration<String> headerEnums = request.getHeaderNames();
+        while (headerEnums.hasMoreElements()) {
+            String headerName = headerEnums.nextElement();
+            log.info("【{}】头信息：{} = {}", restName, headerName, request.getHeader(headerName));
+        }
+    }
+}
+
+
+6、
+package com.yootk.provider.interceptor;
+
+import com.yootk.jwt.annotation.JWTCheckToken;
+import com.yootk.jwt.code.JWTResponseCode;
+import com.yootk.jwt.service.ITokenService;
+import com.yootk.jwt.util.JWTMemberDataService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.Method;
+
+public class JWTAuthorizeInterceptor implements HandlerInterceptor {
+    // 此时需要确定有一个Token数据接收的参数名称，这个Token可能通过地址重写传递，或者是利用头信息传递
+    private static final String TOKEN_NAME = "yootk-token";
+    @Autowired // 区分出角色和权限的信息
+    private JWTMemberDataService memberDataService;
+    @Autowired // JWT有效性的检查
+    private ITokenService tokenService;
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        boolean flag = true; // 拦截
+        if (!(handler instanceof HandlerMethod)) {  // 类型不匹配
+           return flag;
+        }
+        HandlerMethod handlerMethod = (HandlerMethod) handler; // 因为需要对Action进行解析处理
+        Method method = handlerMethod.getMethod(); // 获取调用的方法对象
+        if (method.isAnnotationPresent(JWTCheckToken.class)) {  // 当前的方法上存在有指定注解
+            // 如果发现此时出现了Token的错误则肯定要直接进行响应，不会走到Action响应上
+            response.setCharacterEncoding("UTF-8");
+            response.setContentType("application/json;charset=utf-8");
+            JWTCheckToken checkToken = method.getAnnotation(JWTCheckToken.class); // 获取配置注解
+            if (checkToken.required()) { // 启用JWT检查
+                // JWT的数据可能来自于参数或者是头信息
+                String token = this.memberDataService.getToken(request, TOKEN_NAME);
+                if (!StringUtils.hasLength(token)) {    // 没有Token数据
+                    flag = false;
+                    response.getWriter().println(JWTResponseCode.NO_AUTH_CODE); // 直接响应错误代码
+                } else {    // 此时的Token存在
+                    if (!this.tokenService.verifyToken(token)) {    // Token校验失败
+                        flag = false;
+                        response.getWriter().println(JWTResponseCode.TOKEN_TIMEOUT_CODE);
+                    } else {    // Token没有失败
+                        if (!(checkToken.role() == null || "".equals(checkToken.role()))) { // 需要进行角色检查
+                            // 根据Token字符串解析出所有的角色集合，而后判断是否存在有指定的角色信息
+                            if (this.memberDataService.roles(token).contains(checkToken.role())) {
+                                flag = true; // 允许访问
+                            } else { // 失败访问
+                                response.getWriter().println(JWTResponseCode.NO_AUTH_CODE);
+                                flag = false; // 不允许访问
+                            }
+                        } else if (!(checkToken.action() == null || "".equals(checkToken.action()))) {
+                            if (this.memberDataService.actions(token).contains(checkToken.action())) {
+                                flag = true; // 允许访问
+                            } else { // 失败访问
+                                response.getWriter().println(JWTResponseCode.NO_AUTH_CODE);
+                                flag = false; // 不允许访问
+                            }
+                        } else {
+                            flag = true;
+                        }
+                    }
+                }
+            }
+        }
+        return flag;
+    }
+}
+
+
+
+7、
+package com.yootk.provider.config;
+
+import com.yootk.provider.interceptor.JWTAuthorizeInterceptor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+@Configuration
+public class JWTInterceptorConfig implements WebMvcConfigurer {
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(this.getDefaultHandlerInterceptor()).addPathPatterns("/**");
+    }
+
+    @Bean
+    public HandlerInterceptor getDefaultHandlerInterceptor() {
+        return new JWTAuthorizeInterceptor();
+    }
+}
+
+
+8、
+yootk:
+  security:
+    config:
+      jwt:
+        sign: muyan
+        issuer: MuyanYootk
+        secret: www.yootk.com
+        expire: 100000 # 单位：秒
+      password:
+        encrypt:
+          repeat: 5
+          salt: www.yootk.com
+
+9、
+

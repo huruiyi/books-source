@@ -1,0 +1,97 @@
+1、
+vi /etc/sysconfig/network-scripts/ifcfg-ens33
+
+2、
+IPADDR=192.168.190.191
+
+
+3、
+vi /etc/hostname
+vi /etc/hosts
+4、
+service mysqld start
+
+5、
+/usr/local/mysql/bin/mysql -uroot -pmysqladmin
+
+6、
+CREATE DATABASE seata CHARACTER SET UTF8;
+
+7、
+use seata
+
+8、
+b860e2f4-1ec2-4a43-b895-5f89869dd5f0
+
+9、
+tar xzvf /var/ftp/seata-server-1.4.2.tar.gz -C /usr/local/
+
+10、
+vi /usr/local/seata/seata-server-1.4.2/conf/registry.conf
+
+registry {
+  type = "nacos"
+  nacos {
+    application = "seata-server"
+    serverAddr = "192.168.113.17:8848"
+    group = "SEATA_GROUP"
+    namespace = "b860e2f4-1ec2-4a43-b895-5f89869dd5f0"
+    cluster = "SeataCluster"
+    username = "nacos"
+    password = "nacos"
+  }
+}
+
+11、
+
+vi /usr/local/seata/seata-server-1.4.2/conf/file.conf
+
+store {
+  mode = "db"
+  db {
+    ## the implement of javax.sql.DataSource, such as DruidDataSource(druid)/BasicDataSource(dbcp)/HikariDataSource(hikari) etc.
+    datasource = "druid"
+    ## mysql/oracle/postgresql/h2/oceanbase etc.
+    dbType = "mysql"
+    driverClassName = "com.mysql.jdbc.Driver"
+    ## if using mysql to store the data, recommend add rewriteBatchedStatements=true in jdbc connection param
+    url = "jdbc:mysql://127.0.0.1:3306/seata?rewriteBatchedStatements=true"
+    user = "root"
+    password = "mysqladmin"
+    minConn = 5
+    maxConn = 100
+    globalTable = "global_table"
+    branchTable = "branch_table"
+    lockTable = "lock_table"
+    queryLimit = 100
+    maxWait = 5000
+  }
+}
+
+12、
+mv /usr/local/seata/seata-server-1.4.2/lib/jdbc/mysql-connector-java-8.0.19.jar /usr/local/seata/seata-server-1.4.2/lib/
+
+13、
+/usr/local/seata/seata-server-1.4.2/bin/seata-server.sh > /usr/local/seata/seata-server-1.4.2/logs/seata.log 2>&1 &
+
+14、
+firewall-cmd --zone=public --add-port=8091/tcp --permanent
+firewall-cmd --reload
+
+
+15、
+vi /usr/local/seata/seata-server-1.4.2/config.txt
+store.mode=db
+store.db.url=jdbc:mysql://127.0.0.1:3306/seata?useUnicode=true&rewriteBatchedStatements=true
+store.db.user=root
+store.db.password=mysqladmin
+
+16、
+cd /usr/local/seata/seata-server-1.4.2/bin/
+
+17、
+sh /usr/local/seata/seata-server-1.4.2/bin/nacos-config.sh -h 192.168.113.17 -p 8848 -t b860e2f4-1ec2-4a43-b895-5f89869dd5f0 -g SEATA_GROUP -u nacos -w nacos
+
+
+
+

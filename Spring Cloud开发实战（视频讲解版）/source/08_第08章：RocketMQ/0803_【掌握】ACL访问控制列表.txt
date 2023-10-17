@@ -1,0 +1,55 @@
+1、
+vi /usr/local/rocketmq/conf/broker.conf
+aclEnable=true
+
+2、
+vi /usr/local/rocketmq/conf/plain_acl.yml
+
+3、
+globalWhiteRemoteAddresses:
+- 10.10.103.*
+- 192.168.0.*
+
+accounts:
+- accessKey: RocketMQMuyan
+  secretKey: helloyootk
+  whiteRemoteAddress:
+  admin: false
+  defaultTopicPerm: PUB|SUB
+  defaultGroupPerm: PUB|SUB
+  topicPerms:
+  - TopicMuyan=DENY
+  - TopicYootk=PUB|SUB
+  - TopicBenchmark=PUB|SUB
+  groupPerms:
+  # the group should convert to retry topic
+  - yootk-group=DENY
+  - muyan-group=PUB|SUB
+  - happy-group=SUB
+
+- accessKey: RocketMQAdmin
+  secretKey: hello123456
+  whiteRemoteAddress: 192.168.1.*
+  # if it is admin, it could access all resources
+  admin: true
+
+
+4、
+nohup /usr/local/rocketmq/bin/mqbroker -c /usr/local/rocketmq/conf/broker.conf > /usr/local/rocketmq/logs/rocketmq-broker.log 2>&1 &
+
+5、
+/usr/local/rocketmq/bin/tools.sh org.apache.rocketmq.example.quickstart.Producer
+/usr/local/rocketmq/bin/tools.sh org.apache.rocketmq.example.quickstart.Consumer
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

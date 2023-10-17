@@ -1,0 +1,103 @@
+1、
+// https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-openfeign
+implementation group: 'org.springframework.cloud', name: 'spring-cloud-starter-openfeign', version: '3.0.3'
+
+
+2、
+project(":common-api") {    // 进行子模块的配置
+    dependencies { // 配置模块所需要的依赖库
+        compile("org.springframework.boot:spring-boot-starter-web") // SpringBoot依赖
+        compile('org.springframework.cloud:spring-cloud-starter-openfeign')
+    }
+}
+
+3、
+package com.yootk.service;
+
+import com.yootk.common.dto.DeptDTO;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
+import java.util.Map;
+@FeignClient("dept.provider") // 定义要访问的微服务实例名称
+public interface IDeptService { // 业务接口
+    /**
+     * 根据部门的编号获取部门的完整信息
+     * @param id 要查询的部门编号
+     * @return 编号存在则以DTO对象的形式返回部门数据，如果不存在返回null
+     */
+    @GetMapping("/provider/dept/get/{deptno}") // 远程REST接口
+    public DeptDTO get(@PathVariable("deptno") long id);
+    /**
+     * 增加部门对象
+     * @param dto 保存要增加部门的详细数据
+     * @return 增加成功返回true，否则返回false
+     */
+    @PostMapping("/provider/dept/add")
+    public boolean add(DeptDTO dto);
+    /**
+     * 列出所有的部门数据信息
+     * @return 全部数据的集合， 如果没有任何的部门数据则集合为空（size() == 0）
+     */
+    @GetMapping("/provider/dept/list")
+    public List<DeptDTO> list();
+    /**
+     * 进行部门的分页数据加载操作
+     * @param currentPage 当前所在页
+     * @param lineSize 每页加载的数据行数
+     * @param column 模糊查询的数据列
+     * @param keyword 模糊查询关键字
+     * @return 部门集合数据以及统计数据，返回的数据项包括：
+     * 1、key = allDepts、value = List集合（部门的全部数据对象）
+     * 2、key = allRecorders、value = 总记录数；
+     * 3、key = allPages、value = 页数。
+     */
+    @GetMapping("/provider/dept/split")
+    public Map<String, Object> split(
+            @RequestParam("cp") int currentPage,
+            @RequestParam("ls") int lineSize,
+            @RequestParam("col") String column,
+            @RequestParam("kw") String keyword);
+}
+
+
+4、
+package com.yootk.consumer;
+
+import muyan.yootk.config.ribbon.DeptProviderRibbonConfig;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.ribbon.RibbonClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+// 如果此时要有多个配置项，可以使用@RibbonClients注解，该注解可以配置多个@RibbonClient
+@RibbonClient(name = "dept.provider", configuration = DeptProviderRibbonConfig.class) // 自定义Ribbon配置
+@EnableFeignClients("com.yootk.service") // Feign扫描包
+public class StartConsumerApplication { // 沐言科技：www.yootk.com
+    public static void main(String[] args) {
+        SpringApplication.run(StartConsumerApplication.class, args);
+    }
+}
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

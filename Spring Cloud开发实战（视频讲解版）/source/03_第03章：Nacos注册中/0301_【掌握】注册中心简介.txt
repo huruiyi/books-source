@@ -1,0 +1,32 @@
+1、
+    public static final String DEPT_ADD_URL =
+            "http://provider-dept-8001:8001/provider/dept/add";
+    public static final String DEPT_GET_URL =
+            "http://provider-dept-8001:8001/provider/dept/get/"; // id是自己变更的
+    public static final String DEPT_LIST_URL =
+            "http://provider-dept-8001:8001/provider/dept/list";
+    public static final String DEPT_SPLIT_URL =
+            "http://provider-dept-8001:8001/provider/dept/split";
+
+2、
+https://docs.spring.io/spring-cloud-consul/docs/3.0.3/reference/html/
+3、
+https://docs.spring.io/spring-cloud-zookeeper/docs/3.0.3/reference/html/
+
+4、
+https://spring-cloud-alibaba-group.github.io/github-pages/hoxton/en-us/index.html
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+

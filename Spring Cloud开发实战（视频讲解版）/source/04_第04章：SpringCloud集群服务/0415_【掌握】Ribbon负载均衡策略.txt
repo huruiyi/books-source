@@ -1,0 +1,60 @@
+1、
+dept.provider: # 微服务的ID
+  ribbon:
+    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RandomRule # IRule子类
+
+2、
+dept.provider: # 微服务的ID
+  ribbon:
+    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RandomRule # IRule子类
+    NFLoadBalancerClassName: com.netflix.loadbalancer.DynamicServerListLoadBalancer # ILoadBalancer
+
+3、
+@RibbonClient(name = "dept.provider", configuration = DeptProviderRibbonConfig.class)
+
+4、
+package muyan.yootk.config.ribbon; // 该包不在应用程序启动类的扫描包路径下
+
+import com.netflix.client.config.IClientConfig;
+import com.netflix.loadbalancer.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration // 这个类必须使用该注解定义
+public class DeptProviderRibbonConfig {
+    @Autowired
+    private IClientConfig clientConfig;
+    @Autowired
+    private ServerList serverList;
+    @Autowired
+    private ServerListUpdater updater;
+    @Bean // Bean注册
+    public IRule ribbonRule() { // 自定义负载均衡规则
+        return new RandomRule(); // 随机读取
+    }
+    @Bean
+    public ILoadBalancer loadBalancer() {
+        DynamicServerListLoadBalancer loadBalancer = new DynamicServerListLoadBalancer<>(this.clientConfig);
+        loadBalancer.setServerListImpl(this.serverList);
+        loadBalancer.setServerListUpdater(this.updater);
+        loadBalancer.setRule(this.ribbonRule()); // 算法
+        return loadBalancer;
+    }
+}
+
+
+5、
+
+
+6、
+
+
+7、
+
+
+8、
+
+
+9、
+
