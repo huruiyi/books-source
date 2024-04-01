@@ -1,2 +1,0 @@
-isolate servlet code to controller classes
-call ControllerServlet DispatcherServlet
