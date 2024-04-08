@@ -2,6 +2,7 @@ package vip.fairy.app20a.controller;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -11,8 +12,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import vip.fairy.app20a.domain.Product;
 
-@org.springframework.stereotype.Controller
-
+@Controller
 public class ProductController {
 
   private static final Log logger = LogFactory.getLog(ProductController.class);
@@ -27,8 +27,6 @@ public class ProductController {
   @RequestMapping(value = "/product_save")
   public String saveProduct(@ModelAttribute Product product, BindingResult bindingResult, Model model) {
     logger.info("saveProduct called 2bb");
-    // we don't need ProductForm anymore,l
-    // Spring MVC can bind HTML forms to Java objects
 
     if (bindingResult.hasErrors()) {
       logger.info("has errors");
@@ -37,8 +35,6 @@ public class ProductController {
 
       return "ProductForm";
     }
-
-    // save product here
 
     model.addAttribute("product", product);
     return "ProductDetails";

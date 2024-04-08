@@ -21,9 +21,7 @@ public class StringToDateConverter implements Converter<String, Date> {
       return dateFormat.parse(s);
     } catch (ParseException e) {
       // the error message will be displayed when using <form:errors>
-      throw new IllegalArgumentException(
-          "invalid date format. Please use this pattern\""
-              + datePattern + "\"");
+      throw new IllegalArgumentException("日期格式异常,格式：(\"" + datePattern + "\")");
     }
   }
 }

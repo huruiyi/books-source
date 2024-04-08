@@ -10,26 +10,26 @@
         http://www.springframework.org/schema/mvc/spring-mvc.xsd     
         http://www.springframework.org/schema/context
         http://www.springframework.org/schema/context/spring-context.xsd">
-        
-    <context:component-scan base-package="vip.fairy.app20a.controller"/>
-     
-    <mvc:annotation-driven conversion-service="conversionService"/>
-    <mvc:resources mapping="/css/**" location="/css/"/>
-    <mvc:resources mapping="/*.html" location="/"/>
-    
-    <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
-        <property name="prefix" value="/WEB-INF/jsp/"/>
-        <property name="suffix" value=".jsp"/>
-    </bean>
-    
-    <bean id="conversionService" 
-            class="org.springframework.context.support.ConversionServiceFactoryBean">
-        <property name="converters">
-            <list>
-                <bean class="vip.fairy.app20a.converter.StringToDateConverter">
-                    <constructor-arg type="java.lang.String" value="MM-dd-yyyy"/>
-                </bean>
-            </list>
-        </property>
-    </bean>
+
+  <context:component-scan base-package="vip.fairy.app20a.controller"/>
+
+  <mvc:annotation-driven conversion-service="conversionService"/>
+  <mvc:resources mapping="/css/**" location="/css/"/>
+  <mvc:resources mapping="/*.html" location="/"/>
+
+  <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+    <property name="prefix" value="/WEB-INF/jsp/"/>
+    <property name="suffix" value=".jsp"/>
+  </bean>
+
+  <bean id="conversionService"
+    class="org.springframework.context.support.ConversionServiceFactoryBean">
+    <property name="converters">
+      <list>
+        <bean class="vip.fairy.app20a.converter.StringToDateConverter">
+          <constructor-arg type="java.lang.String" value="MM-dd-yyyy"/>
+        </bean>
+      </list>
+    </property>
+  </bean>
 </beans>

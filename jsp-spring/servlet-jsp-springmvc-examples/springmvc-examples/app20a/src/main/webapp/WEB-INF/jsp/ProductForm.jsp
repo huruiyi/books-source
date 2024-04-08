@@ -3,7 +3,7 @@
 <html>
 <head>
     <title>Add Product Form</title>
-    <style >@import url("<c:url value="/css/main.css"/>");</style>
+    <style>@import url("<c:url value="/css/main.css"/>");</style>
 </head>
 <body>
 
@@ -13,23 +13,19 @@
             <legend>Add a product</legend>
             <p>
                 <label for="name">Product Name: </label>
-                <input type="text" id="name" name="name"
-                       tabindex="1">
+                <input type="text" id="name" name="name" tabindex="1">
             </p>
             <p>
                 <label for="description">Description: </label>
-                <input type="text" id="description"
-                       name="description" tabindex="2">
+                <input type="text" id="description" name="description" tabindex="2">
             </p>
             <p>
                 <label for="price">Price: </label>
-                <input type="text" id="price" name="price"
-                       tabindex="3">
+                <input type="text" id="price" name="price" tabindex="3">
             </p>
             <p id="buttons">
                 <input id="reset" type="reset" tabindex="4">
-                <input id="submit" type="submit" tabindex="5"
-                       value="Add Product">
+                <input id="submit" type="submit" tabindex="5" value="Add Product">
             </p>
         </fieldset>
     </form>
