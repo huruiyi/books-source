@@ -33,8 +33,7 @@ public class BookController {
   public String editBook(Model model, @PathVariable long id) {
     List<Category> categories = bookService.getAllCategories();
     model.addAttribute("categories", categories);
-    Book book = bookService.get(id);
-    model.addAttribute("book", book);
+    model.addAttribute("book", bookService.get(id));
     return "BookEditForm";
   }
 
