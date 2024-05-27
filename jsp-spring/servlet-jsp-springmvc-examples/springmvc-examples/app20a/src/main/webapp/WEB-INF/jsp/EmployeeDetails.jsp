@@ -10,8 +10,10 @@
     <h4>The employee details have been saved.</h4>
     <p>
     <h5>Details:</h5>
-    First Name: ${employee.firstName}<br/>
-    Last Name: ${employee.lastName}<br/>
+    First Name: ${employee.firstName}
+    <br />
+    Last Name: ${employee.lastName}
+    <br />
     Date of Birth: ${employee.birthDate}
     </p>
 </div>

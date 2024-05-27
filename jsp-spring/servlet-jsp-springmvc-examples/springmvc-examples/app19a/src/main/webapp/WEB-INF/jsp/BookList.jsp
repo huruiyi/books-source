@@ -26,7 +26,9 @@
                 <td>${book.title}</td>
                 <td>${book.isbn}</td>
                 <td>${book.author}</td>
-                <td><a href="book_edit/${book.id}">Edit</a></td>
+                <td>
+                    <a href="book_edit/${book.id}">Edit</a>
+                </td>
             </tr>
         </c:forEach>
     </table>

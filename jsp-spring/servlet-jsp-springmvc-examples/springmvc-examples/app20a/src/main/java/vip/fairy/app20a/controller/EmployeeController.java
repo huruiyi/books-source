@@ -28,9 +28,6 @@ public class EmployeeController {
       logger.info("Code:" + fieldError.getCode() + ", field:" + fieldError.getField());
       return "EmployeeForm";
     }
-
-    // save employee here
-
     model.addAttribute("employee", employee);
     return "EmployeeDetails";
   }

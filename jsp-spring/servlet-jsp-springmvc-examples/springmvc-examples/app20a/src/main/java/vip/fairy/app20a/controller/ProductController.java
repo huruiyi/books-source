@@ -2,7 +2,6 @@ package vip.fairy.app20a.controller;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -12,10 +11,19 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import vip.fairy.app20a.domain.Product;
 
-@Controller
+@org.springframework.stereotype.Controller
+
 public class ProductController {
 
   private static final Log logger = LogFactory.getLog(ProductController.class);
+
+  @InitBinder
+  public void initBinder(WebDataBinder binder) {
+    logger.info("initBinder in ProductController");
+    binder.initDirectFieldAccess();
+    binder.setDisallowedFields("id");
+    binder.setRequiredFields("name", "description", "price");
+  }
 
   @RequestMapping(value = "/product_input")
   public String inputProduct(Model model) {
@@ -32,7 +40,6 @@ public class ProductController {
       logger.info("has errors");
       FieldError fieldError = bindingResult.getFieldError();
       logger.info("Code:" + fieldError.getCode() + ", field:" + fieldError.getField());
-
       return "ProductForm";
     }
 
@@ -40,13 +47,5 @@ public class ProductController {
     return "ProductDetails";
   }
 
-
-  @InitBinder
-  public void initBinder(WebDataBinder binder) {
-    logger.info("initBinder in ProductController");
-    binder.initDirectFieldAccess();
-    binder.setDisallowedFields("id");
-    binder.setRequiredFields("name", "description", "price");
-  }
 
 }

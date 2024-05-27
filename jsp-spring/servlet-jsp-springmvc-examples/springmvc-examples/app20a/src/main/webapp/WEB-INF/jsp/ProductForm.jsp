@@ -12,15 +12,15 @@
         <fieldset>
             <legend>Add a product</legend>
             <p>
-                <label for="name">Product Name: </label>
+                <label for="name">Product Name:</label>
                 <input type="text" id="name" name="name" tabindex="1">
             </p>
             <p>
-                <label for="description">Description: </label>
+                <label for="description">Description:</label>
                 <input type="text" id="description" name="description" tabindex="2">
             </p>
             <p>
-                <label for="price">Price: </label>
+                <label for="price">Price:</label>
                 <input type="text" id="price" name="price" tabindex="3">
             </p>
             <p id="buttons">

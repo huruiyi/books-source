@@ -11,25 +11,26 @@
 <body>
 <%--commandName 用 modelAttribute替换--%>
 <div id="global">
+    <%--@elvariable id="book" type="vip.fairy.app19a.domain.Book"--%>
     <form:form modelAttribute="book" action="${pageContext.request.contextPath}/book_update" method="post">
         <fieldset>
             <legend>Edit a book</legend>
-            <form:hidden path="id"/>
+            <form:hidden path="id" />
             <p>
-                <label for="category">Category: </label>
-                <form:select id="category" path="category.id" items="${categories}" itemLabel="name" itemValue="id"/>
+                <label for="category">Category:</label>
+                <form:select id="category" path="category.id" items="${categories}" itemLabel="name" itemValue="id" />
             </p>
             <p>
-                <label for="title">Title: </label>
-                <form:input id="title" path="title"/>
+                <label for="title">Title:</label>
+                <form:input id="title" path="title" />
             </p>
             <p>
-                <label for="author">Author: </label>
-                <form:input id="author" path="author"/>
+                <label for="author">Author:</label>
+                <form:input id="author" path="author" />
             </p>
             <p>
-                <label for="isbn">ISBN: </label>
-                <form:input id="isbn" path="isbn"/>
+                <label for="isbn">ISBN:</label>
+                <form:input id="isbn" path="isbn" />
             </p>
 
             <p id="buttons">
