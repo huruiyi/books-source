@@ -24,7 +24,7 @@ public class DateFormatter implements Formatter<Date> {
   }
 
   @Override
-  public Date parse(String s, Locale locale) throws ParseException {
+  public Date parse(String s, Locale locale) {
     try {
       return dateFormat.parse(s);
     } catch (ParseException e) {

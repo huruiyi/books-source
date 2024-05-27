@@ -8,16 +8,17 @@
 </head>
 <body>
 <div id="global">
+    <%--@elvariable id="login" type="vip.fairy.app24a.domain.Login"--%>
     <form:form modelAttribute="login" action="login" method="post">
         <fieldset>
             <legend>Login</legend>
             <p>
-                <label for="userName">User Name: </label>
-                <form:input id="userName" path="userName" cssErrorClass="error"/>
+                <label for="userName">User Name:</label>
+                <form:input id="userName" path="userName" cssErrorClass="error" />
             </p>
             <p>
-                <label for="password">Password: </label>
-                <form:password id="password" path="password" cssErrorClass="error"/>
+                <label for="password">Password:</label>
+                <form:password id="password" path="password" cssErrorClass="error" />
             </p>
             <p id="buttons">
                 <input id="reset" type="reset" tabindex="4">

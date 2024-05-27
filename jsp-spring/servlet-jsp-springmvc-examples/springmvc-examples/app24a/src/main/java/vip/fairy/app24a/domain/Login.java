@@ -1,4 +1,4 @@
-package app24a.domain;
+package vip.fairy.app24a.domain;
 
 import java.io.Serializable;
 

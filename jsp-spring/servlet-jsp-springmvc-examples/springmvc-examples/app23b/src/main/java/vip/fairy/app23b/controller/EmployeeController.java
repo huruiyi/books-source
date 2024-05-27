@@ -31,8 +31,7 @@ public class EmployeeController {
   }
 
   @RequestMapping(value = "employee_save")
-  public String saveEmployee(@ModelAttribute Employee employee, BindingResult bindingResult,
-      Model model) {
+  public String saveEmployee(@ModelAttribute Employee employee, BindingResult bindingResult, Model model) {
     logger.info("saveEmployee called 2");
 
     System.out.println("type of conversion service:" + conversionService.getClass());
@@ -45,8 +44,7 @@ public class EmployeeController {
     if (bindingResult.hasErrors()) {
       System.out.println("has errors");
       FieldError fieldError = bindingResult.getFieldError();
-      System.out.println("Code:" + fieldError.getCode()
-          + ", field:" + fieldError.getField());
+      System.out.println("Code:" + fieldError.getCode() + ", field:" + fieldError.getField());
 
       return "EmployeeForm";
     }
